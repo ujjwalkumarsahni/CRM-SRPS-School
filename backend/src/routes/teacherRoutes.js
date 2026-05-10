@@ -10,7 +10,8 @@ const {
   getMyAttendance,
   createLeaveRequest,
   getMyLeaves,
-  updateProfile
+  updateProfile,
+  cancelLeaveRequest,
 } = require('../controllers/teacherController');
 
 router.use(protect);
@@ -35,5 +36,5 @@ router.get('/profile', getMyProfile);
 router.get('/attendance', getMyAttendance);
 router.post('/leaves', createLeaveRequest);
 router.get('/leaves', getMyLeaves);
-
+router.delete('/leaves/:leaveId', cancelLeaveRequest);
 module.exports = router;

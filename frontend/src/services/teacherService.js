@@ -1,4 +1,3 @@
-// teacherService.js
 import api from './api';
 
 const teacherService = {
@@ -46,6 +45,12 @@ const teacherService = {
   // GET /api/teacher/leaves
   getMyLeaves: async () => {
     const response = await api.get('/teacher/leaves');
+    return response.data;
+  },
+
+  // DELETE /api/teacher/leaves/:leaveId - Cancel pending leave
+  cancelLeaveRequest: async (leaveId) => {
+    const response = await api.delete(`/teacher/leaves/${leaveId}`);
     return response.data;
   }
 };
