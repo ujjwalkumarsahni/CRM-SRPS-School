@@ -524,7 +524,6 @@ const AttendanceManagement = () => {
               : "text-gray-600 hover:bg-[#EADDCD] hover:text-[#0D5166]"
           }`}
         >
-          <Calendar size={18} />
           <span className="hidden sm:inline">Attendance Sheet</span>
           <span className="sm:hidden">Attendance</span>
         </button>
@@ -536,7 +535,6 @@ const AttendanceManagement = () => {
               : "text-gray-600 hover:bg-[#EADDCD] hover:text-[#0D5166]"
           }`}
         >
-          <Bell size={18} />
           <span className="hidden sm:inline">Update Requests</span>
           <span className="sm:hidden">Requests</span>
         </button>
@@ -548,7 +546,6 @@ const AttendanceManagement = () => {
               : "text-gray-600 hover:bg-[#EADDCD] hover:text-[#0D5166]"
           }`}
         >
-          <Calendar size={18} />
           <span className="hidden sm:inline">Holidays</span>
           <span className="sm:hidden">Holidays</span>
         </button>

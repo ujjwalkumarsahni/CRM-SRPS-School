@@ -3,9 +3,9 @@ const axios = require('axios');
 const getAddressFromCoordinates = async (lat, lng) => {
   try {
     const response = await axios.get(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.GOOGLE_MAPS_API_KEY}`
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyC8Pq8uVl8N8Eb6cVXwWQSDVpSYdq7MKMY`
     );
-    
+    console.log(JSON.stringify(response.data, null, 2));
     if (response.data.results && response.data.results[0]) {
       return response.data.results[0].formatted_address;
     }
