@@ -3,11 +3,12 @@ const transporter = require('../configs/nodemailer');
 const sendEmail = async (to, subject, html) => {
   try {
     await transporter.sendMail({
-      from: `"Attendance System" <${process.env.EMAIL_USER}>`,
+      from: `"SRPS" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html
     });
+
     return true;
   } catch (error) {
     console.error('Email sending failed:', error);
@@ -17,171 +18,771 @@ const sendEmail = async (to, subject, html) => {
 
 const accountCreatedEmail = (name, email, password) => {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #4CAF50;">Welcome to Attendance Management System</h2>
-      <p>Dear ${name},</p>
-      <p>Your teacher account has been created successfully. Here are your login credentials:</p>
-      <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; margin: 20px 0;">
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Password:</strong> ${password}</p>
-      </div>
-      <p><strong>Important:</strong> Please login and complete your profile to start using the system.</p>
-      <a href="${process.env.FRONTEND_URL}/login" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
-      <p style="margin-top: 20px; color: #666;">Best regards,<br>Attendance Management Team</p>
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+    
+    <div style="background-color: #1e3a8a; color: white; padding: 20px; text-align: center;">
+      <h1 style="margin: 0;">SRPS</h1>
     </div>
+
+    <div style="padding: 30px;">
+      <h2 style="color: #1e3a8a;">Welcome, ${name} 👋</h2>
+
+      <p>
+        Your teacher account has been successfully created by the administration team.
+        You can now access the School Attendance System to manage attendance,
+        student records, and academic activities.
+      </p>
+
+      <div style="background-color: #f4f7ff; padding: 10px; border-radius: 8px; margin: 10px 0;">
+        <h3 style="margin-top: 0; color: #1e3a8a;">Login Credentials</h3>
+
+        <p style="margin: 8px 0;">
+          <strong>Email:</strong> ${email}
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>Password:</strong> ${password}
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a 
+          href="${process.env.FRONTEND_URL}/login"
+          style="
+            background-color: #1e3a8a;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+          "
+        >
+          Login to Your Account
+        </a>
+      </div>
+
+      <p>
+        For security purposes, we strongly recommend changing your password
+        after your first login.
+      </p>
+
+      <p>
+        If you face any issues while accessing your account, please contact
+        the school administration or technical support team.
+      </p>
+
+      <br />
+
+      <p>
+        Regards,<br />
+        <strong>SRPS Administration Team</strong>
+      </p>
+    </div>
+
+    <div style="background-color: #f3f4f6; text-align: center; padding: 15px; font-size: 13px; color: #666;">
+      © ${new Date().getFullYear()} SRPS - Attendance System
+    </div>
+
+  </div>
   `;
 };
 
 const accountVerifiedEmail = (name) => {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #4CAF50;">Account Verified!</h2>
-      <p>Dear ${name},</p>
-      <p>Your account has been verified by the admin. You can now:</p>
-      <ul>
-        <li>Mark your daily attendance</li>
-        <li>Apply for leaves</li>
-        <li>View your attendance history</li>
-      </ul>
-      <a href="${process.env.FRONTEND_URL}/dashboard" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Go to Dashboard</a>
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+    
+    <div style="background-color: #1e3a8a; color: white; padding: 20px; text-align: center;">
+      <h1 style="margin: 0;">SRPS</h1>
     </div>
+
+    <div style="padding: 30px;">
+
+      <h2 style="color: #1e3a8a;">Account Successfully Verified</h2>
+
+      <p>Dear ${name},</p>
+
+      <p>
+        Your account has been successfully verified by the administration team.
+        You can now access all features available in the School Attendance System.
+      </p>
+
+      <div style="background-color: #f4f7ff; padding: 10px; border-radius: 8px; margin: 10px 0;">
+        <h3 style="margin-top: 0; color: #1e3a8a;">You Can Now:</h3>
+
+        <ul style="padding-left: 20px; margin: 0;">
+          <li>Mark your daily attendance</li>
+          <li>Apply for leave requests</li>
+          <li>View attendance history</li>
+          <li>Manage academic activities</li>
+        </ul>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a 
+          href="${process.env.FRONTEND_URL}/dashboard"
+          style="
+            background-color: #1e3a8a;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+          "
+        >
+          Go to Dashboard
+        </a>
+      </div>
+
+      <p>
+        If you face any issues while accessing your account,
+        please contact the administration or technical support team.
+      </p>
+
+      <br />
+
+      <p>
+        Regards,<br />
+        <strong>SRPS Administration Team</strong>
+      </p>
+
+    </div>
+
+    <div style="background-color: #f3f4f6; text-align: center; padding: 15px; font-size: 13px; color: #666;">
+      © ${new Date().getFullYear()} SRPS - Attendance System
+    </div>
+
+  </div>
   `;
 };
 
 const leaveCreatedEmail = (name, startDate, endDate, reason) => {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #FF9800;">Leave Request Submitted</h2>
-      <p>Dear ${name},</p>
-      <p>Your leave request has been submitted successfully. Details:</p>
-      <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; margin: 20px 0;">
-        <p><strong>From:</strong> ${new Date(startDate).toLocaleDateString()}</p>
-        <p><strong>To:</strong> ${new Date(endDate).toLocaleDateString()}</p>
-        <p><strong>Reason:</strong> ${reason}</p>
-        <p><strong>Status:</strong> Pending Approval</p>
-      </div>
-      <p>You will receive an email once the admin reviews your request.</p>
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+    
+    <div style="background-color: #1e3a8a; color: white; padding: 20px; text-align: center;">
+      <h1 style="margin: 0;">SRPS</h1>
     </div>
+
+    <div style="padding: 30px;">
+
+      <h2 style="color: #1e3a8a;">Leave Request Submitted</h2>
+
+      <p>Dear ${name},</p>
+
+      <p>
+        Your leave request has been submitted successfully and is currently
+        under review by the administration team.
+      </p>
+
+      <div style="background-color: #f4f7ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+
+        <h3 style="margin-top: 0; color: #1e3a8a;">Leave Details</h3>
+
+        <p style="margin: 8px 0;">
+          <strong>From:</strong> ${new Date(startDate).toLocaleDateString()}
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>To:</strong> ${new Date(endDate).toLocaleDateString()}
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>Reason:</strong> ${reason}
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>Status:</strong> Pending Approval
+        </p>
+
+      </div>
+
+      <p>
+        You will receive another notification once your leave request
+        has been reviewed by the administration.
+      </p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a 
+          href="${process.env.FRONTEND_URL}/dashboard"
+          style="
+            background-color: #1e3a8a;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+          "
+        >
+          View Dashboard
+        </a>
+      </div>
+
+      <br />
+
+      <p>
+        Regards,<br />
+        <strong>SRPS Administration Team</strong>
+      </p>
+
+    </div>
+
+    <div style="background-color: #f3f4f6; text-align: center; padding: 15px; font-size: 13px; color: #666;">
+      © ${new Date().getFullYear()} SRPS - Attendance System
+    </div>
+
+  </div>
   `;
 };
 
 const leaveApprovedEmail = (name, startDate, endDate, status) => {
-  const color = status === 'approved' ? '#4CAF50' : '#F44336';
-  const message = status === 'approved' ? 'Approved' : 'Rejected';
-  
+  const isApproved = status === 'approved';
+
+  const title = isApproved
+    ? 'Leave Request Approved'
+    : 'Leave Request Rejected';
+
+  const statusText = isApproved ? 'Approved' : 'Rejected';
+
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: ${color};">Leave Request ${message}</h2>
-      <p>Dear ${name},</p>
-      <p>Your leave request from ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()} has been <strong>${message}</strong>.</p>
-      ${status === 'approved' ? '<p>The attendance for these dates has been automatically marked as "Leave".</p>' : ''}
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+    
+    <div style="background-color: #1e3a8a; color: white; padding: 20px; text-align: center;">
+      <h1 style="margin: 0;">SRPS</h1>
     </div>
+
+    <div style="padding: 30px;">
+
+      <h2 style="color: #1e3a8a;">${title}</h2>
+
+      <p>Dear ${name},</p>
+
+      <p>
+        Your leave request has been reviewed by the administration team.
+      </p>
+
+      <div style="background-color: #f4f7ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+
+        <h3 style="margin-top: 0; color: #1e3a8a;">Leave Details</h3>
+
+        <p style="margin: 8px 0;">
+          <strong>From:</strong> ${new Date(startDate).toLocaleDateString()}
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>To:</strong> ${new Date(endDate).toLocaleDateString()}
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>Status:</strong> ${statusText}
+        </p>
+
+      </div>
+
+      ${
+        isApproved
+          ? `
+        <p>
+          The attendance for the approved leave dates has been automatically
+          marked as <strong>"Leave"</strong> in the system.
+        </p>
+      `
+          : `
+        <p>
+          Unfortunately, your leave request could not be approved at this time.
+          Please contact the administration for further clarification if needed.
+        </p>
+      `
+      }
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a 
+          href="${process.env.FRONTEND_URL}/dashboard"
+          style="
+            background-color: #1e3a8a;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+          "
+        >
+          View Dashboard
+        </a>
+      </div>
+
+      <br />
+
+      <p>
+        Regards,<br />
+        <strong>SRPS Administration Team</strong>
+      </p>
+
+    </div>
+
+    <div style="background-color: #f3f4f6; text-align: center; padding: 15px; font-size: 13px; color: #666;">
+      © ${new Date().getFullYear()} SRPS - Attendance System
+    </div>
+
+  </div>
   `;
 };
 
 const profileCompleteNotification = (adminEmail, teacherName) => {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #2196F3;">Profile Completion Request</h2>
-      <p>Dear Admin,</p>
-      <p>Teacher <strong>${teacherName}</strong> has completed their profile and is ready for verification.</p>
-      <p>Please review their profile and verify the account to grant attendance marking access.</p>
-      <a href="${process.env.FRONTEND_URL}/admin/teachers" style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Review Profile</a>
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+    
+    <div style="background-color: #1e3a8a; color: white; padding: 20px; text-align: center;">
+      <h1 style="margin: 0;">SRPS</h1>
     </div>
+
+    <div style="padding: 30px;">
+
+      <h2 style="color: #1e3a8a;">Profile Verification Request</h2>
+
+      <p>Dear Admin,</p>
+
+      <p>
+        Teacher <strong>${teacherName}</strong> has successfully completed
+        their profile and is now ready for account verification.
+      </p>
+
+      <p>
+        Please review the submitted profile details and verify the account
+        to grant attendance marking access and other system permissions.
+      </p>
+
+      <div style="background-color: #f4f7ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+
+        <h3 style="margin-top: 0; color: #1e3a8a;">Verification Required</h3>
+
+        <p style="margin: 8px 0;">
+          <strong>Teacher Name:</strong> ${teacherName}
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>Status:</strong> Pending Verification
+        </p>
+
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a 
+          href="${process.env.FRONTEND_URL}/admin/teachers"
+          style="
+            background-color: #1e3a8a;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+          "
+        >
+          Review Profile
+        </a>
+      </div>
+
+      <br />
+
+      <p>
+        Regards,<br />
+        <strong>SRPS System Notification</strong>
+      </p>
+
+    </div>
+
+    <div style="background-color: #f3f4f6; text-align: center; padding: 15px; font-size: 13px; color: #666;">
+      © ${new Date().getFullYear()} SRPS - Attendance System
+    </div>
+
+  </div>
   `;
 };
 
 const monthlyAttendanceReport = (name, email, stats, month, year) => {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #9C27B0;">Monthly Attendance Report</h2>
-      <p>Dear ${name},</p>
-      <p>Here is your attendance summary for ${month} ${year}:</p>
-      <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; margin: 20px 0;">
-        <p><strong>✅ Present:</strong> ${stats.present} days</p>
-        <p><strong>❌ Absent:</strong> ${stats.absent} days</p>
-        <p><strong>🕒 Half Day:</strong> ${stats.halfDay} days</p>
-        <p><strong>🌴 Leave:</strong> ${stats.leave} days</p>
-        <p><strong>📊 Total Working Days:</strong> ${stats.totalWorkingDays} days</p>
-        <p><strong>📈 Attendance Percentage:</strong> ${stats.percentage}%</p>
-      </div>
-      <p style="color: #666;">For any discrepancies, please contact the admin.</p>
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+    
+    <div style="background-color: #1e3a8a; color: white; padding: 20px; text-align: center;">
+      <h1 style="margin: 0;">SRPS</h1>
     </div>
+
+    <div style="padding: 30px;">
+
+      <h2 style="color: #1e3a8a;">Monthly Attendance Report</h2>
+
+      <p>Dear ${name},</p>
+
+      <p>
+        Please find below your attendance summary for 
+        <strong>${month} ${year}</strong>.
+      </p>
+
+      <div style="background-color: #f4f7ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+
+        <h3 style="margin-top: 0; color: #1e3a8a;">Attendance Summary</h3>
+
+        <p style="margin: 8px 0;">
+          <strong>Present:</strong> ${stats.present} days
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>Absent:</strong> ${stats.absent} days
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>Half Day:</strong> ${stats.halfDay} days
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>Leave:</strong> ${stats.leave} days
+        </p>
+
+        <p style="margin: 8px 0;">
+          <strong>Total Working Days:</strong> ${stats.totalWorkingDays} days
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;" />
+
+        <p style="margin: 8px 0; font-size: 18px; color: #1e3a8a;">
+          <strong>Attendance Percentage:</strong> ${stats.percentage}%
+        </p>
+
+      </div>
+
+      <p style="color: #666;">
+        If you notice any discrepancies in your attendance records,
+        please contact the administration team for clarification.
+      </p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a 
+          href="${process.env.FRONTEND_URL}/dashboard"
+          style="
+            background-color: #1e3a8a;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+          "
+        >
+          View Dashboard
+        </a>
+      </div>
+
+      <br />
+
+      <p>
+        Regards,<br />
+        <strong>SRPS Administration Team</strong>
+      </p>
+
+    </div>
+
+    <div style="background-color: #f3f4f6; text-align: center; padding: 15px; font-size: 13px; color: #666;">
+      © ${new Date().getFullYear()} SRPS - Attendance System
+    </div>
+
+  </div>
   `;
 };
 
 // Password Reset Email
 const passwordResetEmail = (name, resetUrl) => {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #0D5166;">Reset Your Password</h2>
-      <p>Dear ${name},</p>
-      <p>You requested to reset your password. Click the button below:</p>
-
-      <a href="${resetUrl}" 
-         style="background-color: #0D5166; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0;">
-        Reset Password
-      </a>
-
-      <p style="color:#666;">This link will expire in 30 minutes.</p>
-      <p>If you did not request this, please ignore this email.</p>
-
-      <p style="margin-top:20px;">Regards,<br/>Attendance System</p>
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+    
+    <div style="background-color: #1e3a8a; color: white; padding: 20px; text-align: center;">
+      <h1 style="margin: 0;">SRPS</h1>
     </div>
+
+    <div style="padding: 30px;">
+
+      <h2 style="color: #1e3a8a;">Reset Your Password</h2>
+
+      <p>Dear ${name},</p>
+
+      <p>
+        We received a request to reset your account password.
+        Click the button below to create a new password.
+      </p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a 
+          href="${resetUrl}"
+          style="
+            background-color: #1e3a8a;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+          "
+        >
+          Reset Password
+        </a>
+      </div>
+
+      <div style="background-color: #f4f7ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+
+        <h3 style="margin-top: 0; color: #1e3a8a;">Important Information</h3>
+
+        <p style="margin: 8px 0;">
+          • This password reset link will expire in <strong>30 minutes</strong>.
+        </p>
+
+        <p style="margin: 8px 0;">
+          • If you did not request a password reset, please ignore this email.
+        </p>
+
+        <p style="margin: 8px 0;">
+          • For security reasons, do not share this link with anyone.
+        </p>
+
+      </div>
+
+      <p>
+        If you continue facing issues while accessing your account,
+        please contact the administration or support team.
+      </p>
+
+      <br />
+
+      <p>
+        Regards,<br />
+        <strong>SRPS Administration Team</strong>
+      </p>
+
+    </div>
+
+    <div style="background-color: #f3f4f6; text-align: center; padding: 15px; font-size: 13px; color: #666;">
+      © ${new Date().getFullYear()} SRPS - Attendance System
+    </div>
+
+  </div>
   `;
 };
 
-
-// ✅ Password Reset Success Email
+// Password Reset Success Email
 const passwordResetSuccessEmail = (name) => {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #4CAF50;">Password Reset Successful</h2>
-      <p>Dear ${name},</p>
-      <p>Your password has been successfully updated.</p>
-
-      <p>If you did not perform this action, please contact admin immediately.</p>
-
-      <a href="${process.env.FRONTEND_URL}/login"
-         style="background-color: #0D5166; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-        Login Now
-      </a>
-
-      <p style="margin-top:20px;">Regards,<br/>Attendance System</p>
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+    
+    <div style="background-color: #1e3a8a; color: white; padding: 20px; text-align: center;">
+      <h1 style="margin: 0;">SRPS</h1>
     </div>
+
+    <div style="padding: 30px;">
+
+      <h2 style="color: #1e3a8a;">Password Reset Successful</h2>
+
+      <p>Dear ${name},</p>
+
+      <p>
+        Your account password has been successfully updated.
+        You can now log in using your new password.
+      </p>
+
+      <div style="background-color: #f4f7ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+
+        <h3 style="margin-top: 0; color: #1e3a8a;">Security Notice</h3>
+
+        <p style="margin: 8px 0;">
+          • If you performed this action, no further steps are required.
+        </p>
+
+        <p style="margin: 8px 0;">
+          • If you did not reset your password, please contact the administration team immediately.
+        </p>
+
+        <p style="margin: 8px 0;">
+          • Keep your login credentials secure and do not share them with anyone.
+        </p>
+
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a 
+          href="${process.env.FRONTEND_URL}/login"
+          style="
+            background-color: #1e3a8a;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+          "
+        >
+          Login Now
+        </a>
+      </div>
+
+      <br />
+
+      <p>
+        Regards,<br />
+        <strong>SRPS Administration Team</strong>
+      </p>
+
+    </div>
+
+    <div style="background-color: #f3f4f6; text-align: center; padding: 15px; font-size: 13px; color: #666;">
+      © ${new Date().getFullYear()} SRPS - Attendance System
+    </div>
+
+  </div>
   `;
 };
 
 
 const accountRejectedEmail = (name, reason) => {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #ef4444;">Account Verification Rejected</h2>
-      <p>Dear ${name},</p>
-      <p>We regret to inform you that your account verification request has been rejected.</p>
-      <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; margin: 20px 0;">
-        <p><strong>Reason for rejection:</strong></p>
-        <p>${reason || 'Incomplete or invalid documents provided. Please contact the admin for more details.'}</p>
-      </div>
-      <p>You can contact the school administration for further clarification.</p>
-      <p style="margin-top: 20px; color: #666;">Best regards,<br>Attendance Management Team</p>
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+    
+    <div style="background-color: #1e3a8a; color: white; padding: 20px; text-align: center;">
+      <h1 style="margin: 0;">SRPS</h1>
     </div>
+
+    <div style="padding: 30px;">
+
+      <h2 style="color: #1e3a8a;">Account Verification Rejected</h2>
+
+      <p>Dear ${name},</p>
+
+      <p>
+        We regret to inform you that your account verification request
+        could not be approved by the administration team.
+      </p>
+
+      <div style="background-color: #f4f7ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+
+        <h3 style="margin-top: 0; color: #1e3a8a;">Reason for Rejection</h3>
+
+        <p style="margin: 8px 0;">
+          ${
+            reason ||
+            'Incomplete or invalid documents were provided. Please contact the administration team for further clarification.'
+          }
+        </p>
+
+      </div>
+
+      <p>
+        You may contact the school administration for additional details
+        or assistance regarding the verification process.
+      </p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a 
+          href="${process.env.FRONTEND_URL}/login"
+          style="
+            background-color: #1e3a8a;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+          "
+        >
+          Contact Administration
+        </a>
+      </div>
+
+      <br />
+
+      <p>
+        Regards,<br />
+        <strong>SRPS Administration Team</strong>
+      </p>
+
+    </div>
+
+    <div style="background-color: #f3f4f6; text-align: center; padding: 15px; font-size: 13px; color: #666;">
+      © ${new Date().getFullYear()} SRPS - Attendance System
+    </div>
+
+  </div>
   `;
 };
 
+
 const accountDeactivatedEmail = (name, reason) => {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #ef4444;">Account Deactivated</h2>
-      <p>Dear ${name},</p>
-      <p>Your account has been deactivated by the administrator.</p>
-      <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; margin: 20px 0;">
-        <p><strong>Reason:</strong></p>
-        <p>${reason || 'Please contact the administrator for more details.'}</p>
-      </div>
-      <p>If you believe this is a mistake, please contact the school administration.</p>
-      <p style="margin-top: 20px; color: #666;">Best regards,<br>Attendance Management Team</p>
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+    
+    <div style="background-color: #1e3a8a; color: white; padding: 20px; text-align: center;">
+      <h1 style="margin: 0;">SRPS</h1>
     </div>
+
+    <div style="padding: 30px;">
+
+      <h2 style="color: #1e3a8a;">Account Deactivated</h2>
+
+      <p>Dear ${name},</p>
+
+      <p>
+        Your account has been deactivated by the administration team.
+        As a result, access to the School Attendance System has been restricted.
+      </p>
+
+      <div style="background-color: #f4f7ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+
+        <h3 style="margin-top: 0; color: #1e3a8a;">Reason for Deactivation</h3>
+
+        <p style="margin: 8px 0;">
+          ${
+            reason ||
+            'Please contact the administration team for more details regarding this action.'
+          }
+        </p>
+
+      </div>
+
+      <p>
+        If you believe this action was taken by mistake or require further clarification,
+        please contact the school administration.
+      </p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a 
+          href="${process.env.FRONTEND_URL}/login"
+          style="
+            background-color: #1e3a8a;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+          "
+        >
+          Contact Administration
+        </a>
+      </div>
+
+      <br />
+
+      <p>
+        Regards,<br />
+        <strong>SRPS Administration Team</strong>
+      </p>
+
+    </div>
+
+    <div style="background-color: #f3f4f6; text-align: center; padding: 15px; font-size: 13px; color: #666;">
+      © ${new Date().getFullYear()} SRPS - Attendance System
+    </div>
+
+  </div>
   `;
 };
 

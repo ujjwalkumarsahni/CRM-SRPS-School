@@ -1,10 +1,39 @@
 @import "tailwindcss";
+/* Add to your index.css or App.css */
 :root {
-  --primary-color: #0D5166;
-  --secondary-color: #F5C78B;
-  --success-color: #EADDCD;
-  --danger-color: #ef4444;
-  --warning-color: #f59e0b;
+  --primary-color: #0B2248;
+  --secondary-color: #E38A0A;
+  --accent-color: #DB2112;
+  --light-color: #F7F7F7;
+}
+
+/* Optional: Add smooth scrolling and transitions */
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Custom scrollbar matching the theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--light-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary-color);
 }
 
 @layer base {

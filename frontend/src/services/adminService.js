@@ -71,10 +71,21 @@ const adminService = {
     return response.data;
   },
 
-  getAllTeachers: async () => {
-    const response = await api.get('/admin/teachers');
+  getAllTeachers: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    // Add all params to query string
+    Object.keys(params).forEach(key => {
+      if (params[key] !== undefined && params[key] !== '' && params[key] !== 'all') {
+        queryParams.append(key, params[key]);
+      }
+    });
+    
+    const queryString = queryParams.toString();
+    const url = `/admin/teachers${queryString ? `?${queryString}` : ''}`;
+    const response = await api.get(url);
     return response.data;
-  },
+  },  
 
   getTeacherById: async (teacherId) => {
     const response = await api.get(`/admin/teachers/${teacherId}`);

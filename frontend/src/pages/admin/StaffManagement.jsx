@@ -1,3 +1,4 @@
+// StaffManagement.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Users, Clock, UserPlus, RefreshCw } from 'lucide-react';
 import adminService from '../../services/adminService.js';
@@ -39,24 +40,20 @@ const StaffManagement = () => {
         limit: pagination.itemsPerPage,
         ...filters
       };
-      // Remove empty filters
-      Object.keys(params).forEach(key => {
-        if (params[key] === '' || params[key] === 'all') {
-          delete params[key];
-        }
-      });
       
       const data = await adminService.getAllTeachers(params);
       setTeachers(data.data || []);
       setPagination(data.pagination || {
         currentPage: page,
         totalPages: 1,
-        totalItems: data.data?.length || 0,
+        totalItems: 0,
         itemsPerPage: pagination.itemsPerPage
       });
       
-      const pending = (data.data || []).filter(t => !t.isVerified && t.profileCompleted).length;
-      setPendingCount(pending);
+      // Fetch pending count separately or calculate from API
+      const pendingParams = { status: 'pending', limit: 1 };
+      const pendingData = await adminService.getAllTeachers(pendingParams);
+      setPendingCount(pendingData.pagination?.totalItems || 0);
     } catch (error) {
       setToast({ message: 'Failed to fetch teachers', type: 'error' });
     } finally {
@@ -74,6 +71,7 @@ const StaffManagement = () => {
 
   const handleFilterChange = (newFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
+    // Reset to page 1 when filters change
     fetchTeachers(1);
   };
 

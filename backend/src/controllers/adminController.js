@@ -166,8 +166,89 @@ const activateTeacher = async (req, res) => {
 
 const getAllTeachers = async (req, res) => {
   try {
-    // Get all users with role teacher
-    const teachers = await User.find({ role: "teacher" }).select("-password");
+    // Extract query parameters for pagination and filtering
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      status = 'all',
+      isVerified = '',
+      isActive = '',
+      designation = '',
+      profileCompleted = ''
+    } = req.query;
+
+    // Build filter object for teachers
+    let filter = { role: "teacher" };
+
+    // Apply search filter (name or email)
+    if (search && search.trim() !== '') {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Apply status filter based on schema enum values
+    if (status && status !== 'all') {
+      switch (status) {
+        case 'pending':
+          filter.status = 'pending';
+          break;
+        case 'active':
+          filter.status = 'active';
+          break;
+        case 'rejected':
+          filter.status = 'rejected';
+          break;
+        case 'deactivated':
+          filter.status = 'deactivated';
+          break;
+        case 'verified':
+          // Verified means isVerified = true and status = active
+          filter.isVerified = true;
+          filter.status = 'active';
+          break;
+        case 'incomplete':
+          filter.profileCompleted = false;
+          break;
+        case 'inactive':
+          filter.isActive = false;
+          break;
+      }
+    }
+
+    // Apply individual filters (if provided and not empty)
+    if (isVerified !== '' && isVerified !== 'all') {
+      filter.isVerified = isVerified === 'true';
+    }
+
+    if (isActive !== '' && isActive !== 'all') {
+      filter.isActive = isActive === 'true';
+    }
+
+    if (profileCompleted !== '' && profileCompleted !== 'all') {
+      filter.profileCompleted = profileCompleted === 'true';
+    }
+
+    if (designation && designation !== '' && designation !== 'all') {
+      filter.designation = designation;
+    }
+
+    // Calculate pagination values
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get total count for pagination
+    const totalItems = await User.countDocuments(filter);
+
+    // Get teachers with pagination and sorting
+    const teachers = await User.find(filter)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
 
     // Get profiles for teachers
     const result = await Promise.all(
@@ -202,7 +283,17 @@ const getAllTeachers = async (req, res) => {
       }),
     );
 
-    res.json({ success: true, data: result });
+    // Send response with pagination metadata
+    res.json({
+      success: true,
+      data: result,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalItems / limitNum),
+        totalItems: totalItems,
+        itemsPerPage: limitNum
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

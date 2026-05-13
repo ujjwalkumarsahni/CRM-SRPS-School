@@ -18,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', require('./src/routes/authRoutes'));
 app.use('/api/admin', require('./src/routes/adminRoutes'));
+app.use('/api/dashboard', require('./src/routes/adminDashboardRoutes'));
 app.use('/api/teacher', require('./src/routes/teacherRoutes'));
 app.use('/api/attendance', require('./src/routes/attendanceRoutes'));
 
