@@ -70,22 +70,6 @@ const Dashboard = () => {
     setRefreshing(false);
   };
 
-  const handleExport = async () => {
-    try {
-      const blob = await adminDashboardService.exportDashboardData();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dashboard-export-${new Date().toISOString()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export failed:', err);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -134,19 +118,12 @@ const Dashboard = () => {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="px-4 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center gap-2 disabled:opacity-50"
+              style={{backgroundColor: colors.primary }}
+              className="px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center gap-2 disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} style={{ color: colors.primary }} />
-              <span style={{ color: colors.primary }}>Refresh</span>
-            </button>
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 rounded-lg text-white flex items-center gap-2 transition-colors"
-              style={{ backgroundColor: colors.primary }}
-            >
-              <Download className="w-4 h-4" />
-              Export Report
-            </button>
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} style={{ color: colors.light }} />
+              <span style={{ color: colors.light}}>Refresh</span>
+            </button>,
           </div>
         </div>
 
@@ -164,21 +141,21 @@ const Dashboard = () => {
             title="Today's Attendance"
             value={`${todayAttendance.attendancePercentage}%`}
             icon={Calendar}
-            color={colors.secondary}
+            color={colors.primary}
             subValue={`${todayAttendance.present} present / ${todayAttendance.total} total`}
           />
           <StatCard
             title="Pending Requests"
             value={pendingRequests.total}
             icon={Bell}
-            color={colors.accent}
+            color={colors.primary}
             subValue={`${pendingRequests.leaveRequests} leaves · ${pendingRequests.attendanceUpdates} updates`}
           />
           <StatCard
             title="Monthly Leave Rate"
             value={`${quickStats.leaveRate}%`}
             icon={TrendingUp}
-            color={colors.secondary}
+            color={colors.primary}
             subValue={`${leaveAnalytics.approvedThisMonth} approved`}
           />
         </div>

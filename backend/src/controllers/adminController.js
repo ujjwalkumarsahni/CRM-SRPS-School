@@ -426,7 +426,7 @@ const processLeaveRequest = async (req, res) => {
 
 
 const AdminProfile = require("../models/AdminProfile");
-
+const cloudinary = require("../configs/cloudinary");
 const getAdminProfile = async (req, res) => {
   try {
     const admin = await User.findById(req.user._id).select('-password');

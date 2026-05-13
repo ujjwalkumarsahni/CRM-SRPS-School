@@ -8,8 +8,8 @@ import CompleteProfile from "./pages/teacher/CompleteProfile";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
-import StaffManagement from "./pages/admin/StaffManagement";
-import AdminAttendanceManagement from "./pages/admin/AttendanceManagement";
+import StaffManagement from "./pages/admin/StaffManagement/StaffManagement";
+import AdminAttendanceManagement from "./pages/admin/AttendanceManagement/AttendanceManagement";
 import AdminLeaveManagement from "./pages/admin/LeaveManagement";
 import AdminProfile from "./pages/admin/Profile";
 

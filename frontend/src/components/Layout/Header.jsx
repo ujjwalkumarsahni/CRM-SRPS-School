@@ -305,10 +305,10 @@ const Header = () => {
           {/* Text - Hide on very small screens */}
           <div className="hidden sm:block">
             <div className="leading-tight mb-0.5">
-              <span className="text-sm md:text-[19px] font-extrabold text-[#F5C78B] font-[Nunito] tracking-tight">
+              <span className="text-sm md:text-[19px] font-extrabold text-[#E38A0A] font-[Nunito] tracking-tight">
                 Shree Ram
               </span>{" "}
-              <span className="text-sm md:text-[19px] font-extrabold text-[#0D5166] font-[Nunito] tracking-tight">
+              <span className="text-sm md:text-[19px] font-extrabold text-[#0B2248] font-[Nunito] tracking-tight">
                 Public School
               </span>
             </div>

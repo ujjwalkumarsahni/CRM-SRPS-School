@@ -197,7 +197,7 @@ const Sidebar = ({ userRole, isOpen, setIsOpen }) => {
                   relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group
                   ${
                     isActive
-                      ? "bg-[#F5C78B] text-[#0D5166] shadow-sm"
+                      ? "bg-[#E38A0A] text-[#0B2248] shadow-sm"
                       : "text-gray-600 hover:bg-[#EADDCD] hover:text-[#0D5166]"
                   }
                   ${isOpen || isHovered ? "justify-start" : "justify-center"}
@@ -235,7 +235,7 @@ const Sidebar = ({ userRole, isOpen, setIsOpen }) => {
                   flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
                   ${
                     isActive
-                      ? "bg-[#F5C78B] text-[#0D5166]"
+                      ? "bg-[#E38A0A] text-[#0B2248]"
                       : "text-gray-600 hover:bg-[#EADDCD] hover:text-[#0D5166]"
                   }
                   ${isOpen || isHovered ? "justify-start" : "justify-center"}
