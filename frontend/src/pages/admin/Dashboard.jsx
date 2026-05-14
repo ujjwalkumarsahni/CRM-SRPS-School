@@ -1,52 +1,115 @@
 // src/pages/admin/Dashboard.jsx
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  UserCheck, 
-  UserX, 
-  Calendar, 
-  Clock, 
-  TrendingUp,
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import {
+  Users,
+  UserCheck,
+  UserX,
+  Calendar,
+  Loader,
+  AlertCircle,
+  RefreshCw,
+  Clock,
   CheckCircle,
   XCircle,
-  AlertCircle,
-  FileText,
-  Download,
-  RefreshCw,
+  ChevronLeft,
   ChevronRight,
-  Bell,
-  PieChart,
-  BarChart3,
-  Activity,
-  Award,
-  Leaf,
-  UserMinus,
-  UserPlus,
-  Briefcase,
-  GraduationCap,
-  Sun,
-  Moon,
-  Loader
-} from 'lucide-react';
-import adminDashboardService from '../../services/adminDashboardService';
+  Play,
+  Pause,
+  User,
+} from "lucide-react";
+import adminDashboardService from "../../services/adminDashboardService";
+
+// CSS Variables from root
+const colors = {
+  primary: "#0B2248",
+  secondary: "#E38A0A",
+  accent: "#DB2112",
+  light: "#F7F7F7",
+  success: "#10B981",
+  danger: "#EF4444",
+  warning: "#F59E0B",
+  info: "#3B82F6",
+};
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState('week');
 
-  const colors = {
-    primary: "#0B2248",
-    secondary: "#E38A0A",
-    accent: "#DB2112",
-    light: "#F7F7F7"
-  };
+  // Carousel states for each section
+  const [presentIndex, setPresentIndex] = useState(0);
+  const [absentIndex, setAbsentIndex] = useState(0);
+  const [leaveIndex, setLeaveIndex] = useState(0);
+  const [halfDayIndex, setHalfDayIndex] = useState(0);
+
+  // Auto-scroll states
+  const [isAutoScrolling, setIsAutoScrolling] = useState({
+    present: true,
+    absent: true,
+    leave: true,
+    halfDay: true,
+  });
+
+  const itemsPerPage = 10;
+
+  // Refs for interval timers
+  const intervalRefs = useRef({
+    present: null,
+    absent: null,
+    leave: null,
+    halfDay: null,
+  });
 
   useEffect(() => {
     fetchDashboardData();
+
+    return () => {
+      Object.keys(intervalRefs.current).forEach((key) => {
+        if (intervalRefs.current[key]) {
+          clearInterval(intervalRefs.current[key]);
+        }
+      });
+    };
   }, []);
+
+  useEffect(() => {
+    if (dashboardData) {
+      setupAutoScroll(
+        "present",
+        dashboardData.presentTeachersList?.length || 0,
+      );
+      setupAutoScroll("absent", dashboardData.absentTeachersList?.length || 0);
+      setupAutoScroll("leave", dashboardData.leaveTeachersList?.length || 0);
+      setupAutoScroll(
+        "halfDay",
+        dashboardData.halfDayTeachersList?.length || 0,
+      );
+    }
+
+    return () => {
+      Object.keys(intervalRefs.current).forEach((key) => {
+        if (intervalRefs.current[key]) {
+          clearInterval(intervalRefs.current[key]);
+        }
+      });
+    };
+  }, [dashboardData]);
+
+  const setupAutoScroll = useCallback(
+    (type, totalItems) => {
+      if (intervalRefs.current[type]) {
+        clearInterval(intervalRefs.current[type]);
+      }
+
+      if (isAutoScrolling[type] && totalItems > itemsPerPage) {
+        intervalRefs.current[type] = setInterval(() => {
+          scrollNext(type, totalItems);
+        }, 4000);
+      }
+    },
+    [isAutoScrolling],
+  );
 
   const fetchDashboardData = async () => {
     try {
@@ -54,11 +117,15 @@ const Dashboard = () => {
       const response = await adminDashboardService.getDashboardData();
       if (response.success) {
         setDashboardData(response.data);
+        setPresentIndex(0);
+        setAbsentIndex(0);
+        setLeaveIndex(0);
+        setHalfDayIndex(0);
       } else {
-        setError('Failed to load dashboard data');
+        setError("Failed to load dashboard data");
       }
     } catch (err) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -70,11 +137,92 @@ const Dashboard = () => {
     setRefreshing(false);
   };
 
+  const scrollNext = useCallback((type, totalItems) => {
+    const maxIndex = Math.max(0, Math.ceil(totalItems / itemsPerPage) - 1);
+    switch (type) {
+      case "present":
+        setPresentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
+        break;
+      case "absent":
+        setAbsentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
+        break;
+      case "leave":
+        setLeaveIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
+        break;
+      case "halfDay":
+        setHalfDayIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const scrollPrev = useCallback((type, totalItems) => {
+    const maxIndex = Math.max(0, Math.ceil(totalItems / itemsPerPage) - 1);
+    switch (type) {
+      case "present":
+        setPresentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
+        break;
+      case "absent":
+        setAbsentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
+        break;
+      case "leave":
+        setLeaveIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
+        break;
+      case "halfDay":
+        setHalfDayIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const toggleAutoScroll = useCallback((type) => {
+    setIsAutoScrolling((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+
+    if (intervalRefs.current[type]) {
+      clearInterval(intervalRefs.current[type]);
+      intervalRefs.current[type] = null;
+    }
+  }, []);
+
+  const handlePageChange = useCallback((type, pageNum) => {
+    switch (type) {
+      case "present":
+        setPresentIndex(pageNum);
+        break;
+      case "absent":
+        setAbsentIndex(pageNum);
+        break;
+      case "leave":
+        setLeaveIndex(pageNum);
+        break;
+      case "halfDay":
+        setHalfDayIndex(pageNum);
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const getPaginatedItems = (items, index) => {
+    if (!items) return [];
+    const start = index * itemsPerPage;
+    const end = start + itemsPerPage;
+    return items.slice(start, end);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: colors.primary }} />
+          <Loader
+            className="w-12 h-12 animate-spin mx-auto mb-4"
+            style={{ color: colors.primary }}
+          />
         </div>
       </div>
     );
@@ -82,14 +230,24 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md text-center">
-          <AlertCircle className="w-16 h-16 mx-auto mb-4" style={{ color: colors.accent }} />
-          <h2 className="text-2xl font-bold mb-2" style={{ color: colors.primary }}>Error Loading Dashboard</h2>
+      <div
+        className="min-h-screen flex items-center justify-center p-4"
+      >
+        <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 max-w-md text-center">
+          <AlertCircle
+            className="w-16 h-16 mx-auto mb-4"
+            style={{ color: colors.accent }}
+          />
+          <h2
+            className="text-xl md:text-2xl font-bold mb-2"
+            style={{ color: colors.primary }}
+          >
+            Error Loading Dashboard
+          </h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={fetchDashboardData}
-            className="px-6 py-2 rounded-lg text-white transition-colors"
+            className="px-6 py-2 rounded-lg text-white transition-colors w-full md:w-auto"
             style={{ backgroundColor: colors.primary }}
           >
             Try Again
@@ -101,482 +259,415 @@ const Dashboard = () => {
 
   if (!dashboardData) return null;
 
-  const { overview, todayAttendance, leaveAnalytics, pendingRequests, charts, recentActivities, upcomingHolidays, performance, quickStats } = dashboardData;
+  const {
+    totalVerifiedTeachers,
+    todayPresentCount,
+    todayAbsentCount,
+    todayLeaveCount,
+    todayHalfDayCount,
+    presentTeachersList,
+    absentTeachersList,
+    leaveTeachersList,
+    halfDayTeachersList,
+    currentDate,
+  } = dashboardData;
+
+  const presentPages = Math.ceil(
+    (presentTeachersList?.length || 0) / itemsPerPage,
+  );
+  const absentPages = Math.ceil(
+    (absentTeachersList?.length || 0) / itemsPerPage,
+  );
+  const leavePages = Math.ceil((leaveTeachersList?.length || 0) / itemsPerPage);
+  const halfDayPages = Math.ceil(
+    (halfDayTeachersList?.length || 0) / itemsPerPage,
+  );
+
+  const currentPresentItems = getPaginatedItems(
+    presentTeachersList,
+    presentIndex,
+  );
+  const currentAbsentItems = getPaginatedItems(absentTeachersList, absentIndex);
+  const currentLeaveItems = getPaginatedItems(leaveTeachersList, leaveIndex);
+  const currentHalfDayItems = getPaginatedItems(
+    halfDayTeachersList,
+    halfDayIndex,
+  );
 
   return (
-    <div className="min-h-screen p-2">
+    <div
+      className="min-h-screen p-3 md:p-6"
+      style={{ backgroundColor: colors.light }}
+    >
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
+      <div className="mb-6 md:mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-4">
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: colors.primary }}>
-              Admin Dashboard
-            </h1>
-            <p className="text-gray-600 mt-1">Welcome back! Here's what's happening today.</p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              style={{backgroundColor: colors.primary }}
-              className="px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center gap-2 disabled:opacity-50"
+            <h1
+              className="text-2xl md:text-3xl font-bold"
+              style={{ color: colors.primary }}
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} style={{ color: colors.light }} />
-              <span style={{ color: colors.light}}>Refresh</span>
-            </button>,
+              Teacher Attendance Dashboard
+            </h1>
+            <p className="text-gray-600 text-sm md:text-base mt-1">
+              {new Date(currentDate).toLocaleDateString("en-IN", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
           </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            style={{ backgroundColor: colors.primary }}
+            className="px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center gap-2 text-white disabled:opacity-50 w-full md:w-auto justify-center"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            <span>Refresh</span>
+          </button>
         </div>
 
-        {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-6 mb-6 md:mb-8">
           <StatCard
-            title="Total Teachers"
-            value={overview.totalTeachers}
+            title="Total Verified"
+            value={totalVerifiedTeachers}
             icon={Users}
             color={colors.primary}
-            trend={overview.activeTeachers}
-            trendLabel="Active"
           />
           <StatCard
-            title="Today's Attendance"
-            value={`${todayAttendance.attendancePercentage}%`}
+            title="Present"
+            value={todayPresentCount}
+            icon={UserCheck}
+            color={colors.primary}
+          />
+          <StatCard
+            title="Absent"
+            value={todayAbsentCount}
+            icon={UserX}
+            color={colors.primary}
+          />
+          <StatCard
+            title="On Leave"
+            value={todayLeaveCount}
             icon={Calendar}
             color={colors.primary}
-            subValue={`${todayAttendance.present} present / ${todayAttendance.total} total`}
           />
           <StatCard
-            title="Pending Requests"
-            value={pendingRequests.total}
-            icon={Bell}
+            title="Half Day"
+            value={todayHalfDayCount || 0}
+            icon={Clock}
             color={colors.primary}
-            subValue={`${pendingRequests.leaveRequests} leaves · ${pendingRequests.attendanceUpdates} updates`}
-          />
-          <StatCard
-            title="Monthly Leave Rate"
-            value={`${quickStats.leaveRate}%`}
-            icon={TrendingUp}
-            color={colors.primary}
-            subValue={`${leaveAnalytics.approvedThisMonth} approved`}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Today's Attendance Breakdown */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold" style={{ color: colors.primary }}>
-              Today's Attendance
-            </h2>
-            <Activity className="w-5 h-5" style={{ color: colors.secondary }} />
-          </div>
-          <div className="space-y-3">
-            <AttendanceBar
-              label="Present"
-              count={todayAttendance.present}
-              total={todayAttendance.total}
-              color={colors.primary}
-              icon={UserCheck}
-            />
-            <AttendanceBar
-              label="Absent"
-              count={todayAttendance.absent}
-              total={todayAttendance.total}
-              color={colors.accent}
-              icon={UserX}
-            />
-            <AttendanceBar
-              label="Half Day"
-              count={todayAttendance.halfDay}
-              total={todayAttendance.total}
-              color={colors.secondary}
-              icon={Clock}
-            />
-            <AttendanceBar
-              label="On Leave"
-              count={todayAttendance.onLeave}
-              total={todayAttendance.total}
-              color={colors.secondary}
-              icon={Leaf}
-            />
-            <AttendanceBar
-              label="Not Marked"
-              count={todayAttendance.notMarked}
-              total={todayAttendance.total}
-              color="gray"
-              icon={AlertCircle}
-            />
-          </div>
-        </div>
+      {/* Four Sections Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        {/* Present Teachers Section */}
+        <Section
+          title="Present Teachers"
+          icon={UserCheck}
+          color={colors.primary}
+          items={currentPresentItems}
+          totalCount={presentTeachersList?.length || 0}
+          currentPage={presentIndex + 1}
+          totalPages={presentPages}
+          onNext={() => scrollNext("present", presentTeachersList?.length || 0)}
+          onPrev={() => scrollPrev("present", presentTeachersList?.length || 0)}
+          onPageChange={(page) => handlePageChange("present", page)}
+          isAutoScrolling={isAutoScrolling.present}
+          onToggleAutoScroll={() => toggleAutoScroll("present")}
+          type="present"
+          colors={colors}
+        />
 
-        {/* Teacher Status Distribution */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold" style={{ color: colors.primary }}>
-              Teacher Status
-            </h2>
-            <PieChart className="w-5 h-5" style={{ color: colors.secondary }} />
+        {/* Absent Teachers Section */}
+        <Section
+          title="Absent Teachers"
+          icon={UserX}
+          color={colors.accent}
+          items={currentAbsentItems}
+          totalCount={absentTeachersList?.length || 0}
+          currentPage={absentIndex + 1}
+          totalPages={absentPages}
+          onNext={() => scrollNext("absent", absentTeachersList?.length || 0)}
+          onPrev={() => scrollPrev("absent", absentTeachersList?.length || 0)}
+          onPageChange={(page) => handlePageChange("absent", page)}
+          isAutoScrolling={isAutoScrolling.absent}
+          onToggleAutoScroll={() => toggleAutoScroll("absent")}
+          type="absent"
+          colors={colors}
+        />
+
+        {/* Leave Teachers Section */}
+        <Section
+          title="On Leave"
+          icon={Calendar}
+          color={colors.secondary}
+          items={currentLeaveItems}
+          totalCount={leaveTeachersList?.length || 0}
+          currentPage={leaveIndex + 1}
+          totalPages={leavePages}
+          onNext={() => scrollNext("leave", leaveTeachersList?.length || 0)}
+          onPrev={() => scrollPrev("leave", leaveTeachersList?.length || 0)}
+          onPageChange={(page) => handlePageChange("leave", page)}
+          isAutoScrolling={isAutoScrolling.leave}
+          onToggleAutoScroll={() => toggleAutoScroll("leave")}
+          type="leave"
+          colors={colors}
+        />
+
+        {/* Half Day Teachers Section */}
+        <Section
+          title="Half Day"
+          icon={Clock}
+          color={colors.primary}
+          items={currentHalfDayItems}
+          totalCount={halfDayTeachersList?.length || 0}
+          currentPage={halfDayIndex + 1}
+          totalPages={halfDayPages}
+          onNext={() => scrollNext("halfDay", halfDayTeachersList?.length || 0)}
+          onPrev={() => scrollPrev("halfDay", halfDayTeachersList?.length || 0)}
+          onPageChange={(page) => handlePageChange("halfDay", page)}
+          isAutoScrolling={isAutoScrolling.halfDay}
+          onToggleAutoScroll={() => toggleAutoScroll("halfDay")}
+          type="halfDay"
+          colors={colors}
+        />
+      </div>
+    </div>
+  );
+};
+
+// Section Component - Simplified with only Photo, Name+Email, Status
+const Section = ({
+  title,
+  icon: Icon,
+  color,
+  items,
+  totalCount,
+  currentPage,
+  totalPages,
+  onNext,
+  onPrev,
+  onPageChange,
+  isAutoScrolling,
+  onToggleAutoScroll,
+  type,
+  colors,
+}) => {
+  const getStatusBadge = () => {
+    switch (type) {
+      case "present":
+        return {
+          bg: colors.primary,
+          text: colors.light,
+          label: "Present",
+        };
+
+      case "absent":
+        return {
+          bg: colors.accent,
+          text: colors.primary,
+          label: "Absent",
+        };
+
+      case "leave":
+        return {
+          bg: colors.secondary,
+          text: colors.primary,
+          label: "On Leave",
+        };
+
+      case "halfDay":
+        return {
+          bg: colors.primary,
+          text: colors.light,
+          label: "Half Day",
+        };
+
+      default:
+        return {
+          bg: "#f3f4f6",
+          text: "#1f2937",
+          label: "Unknown",
+        };
+    }
+  };
+
+  const status = getStatusBadge();
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      {/* Section Header */}
+      <div
+        className="p-4 border-b"
+        style={{ backgroundColor: `${color}`, borderColor: color }}
+      >
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div>
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: colors.light }}
+              >
+                {title}
+              </h2>
+              <p className="text-sm " style={{ color: colors.light }}>
+                Total: {totalCount} teachers
+              </p>
+            </div>
           </div>
-          <div className="space-y-3">
-            <StatusCard
-              label="Active Verified"
-              count={overview.activeTeachers}
-              total={overview.totalTeachers}
-              color={colors.primary}
-              icon={UserCheck}
-            />
-            <StatusCard
-              label="Pending Verification"
-              count={overview.pendingVerification}
-              total={overview.totalTeachers}
-              color={colors.secondary}
-              icon={Clock}
-            />
-            <StatusCard
-              label="Rejected"
-              count={overview.rejectedTeachers}
-              total={overview.totalTeachers}
-              color={colors.accent}
-              icon={XCircle}
-            />
-            <StatusCard
-              label="Deactivated"
-              count={overview.deactivatedTeachers}
-              total={overview.totalTeachers}
-              color="gray"
-              icon={UserMinus}
-            />
-            <StatusCard
-              label="Profile Incomplete"
-              count={overview.profileIncomplete}
-              total={overview.totalTeachers}
-              color={colors.secondary}
-              icon={UserPlus}
-            />
-          </div>
-          <div className="mt-4 pt-4 border-t">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Profile Completion Rate:</span>
-              <span className="font-semibold" style={{ color: colors.primary }}>
-                {overview.profileCompletionRate}%
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onToggleAutoScroll}
+                className={`p-2 rounded-lg transition-colors ${isAutoScrolling ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-600"}`}
+                title={
+                  isAutoScrolling ? "Stop Auto-Scroll" : "Start Auto-Scroll"
+                }
+              >
+                {isAutoScrolling ? (
+                  <Pause className="w-4 h-4" />
+                ) : (
+                  <Play className="w-4 h-4" />
+                )}
+              </button>
+              <button
+                onClick={onPrev}
+                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm text-gray-600">
+                {currentPage} / {totalPages}
               </span>
+              <button
+                onClick={onNext}
+                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-          </div>
-        </div>
-
-        {/* Top Performers */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold" style={{ color: colors.primary }}>
-              Top Performers This Month
-            </h2>
-            <Award className="w-5 h-5" style={{ color: colors.secondary }} />
-          </div>
-          <div className="space-y-4">
-            {performance.topPerformers?.map((teacher, index) => (
-              <div key={teacher._id} className="flex items-center gap-3">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white" 
-                  style={{ backgroundColor: index === 0 ? colors.secondary : colors.primary }}
-                >
-                  {index + 1}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-800">{teacher.name}</p>
-                  <p className="text-sm text-gray-500">{teacher.designation}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold" style={{ color: colors.primary }}>
-                    {teacher.attendancePercentage}%
-                  </p>
-                  <p className="text-xs text-gray-500">Attendance</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Weekly Attendance Trend Chart */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold" style={{ color: colors.primary }}>
-              Weekly Attendance Trend
-            </h2>
-            <div className="flex gap-2">
-              {['week', 'month', 'year'].map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setSelectedPeriod(period)}
-                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                    selectedPeriod === period 
-                      ? 'text-white' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                  style={selectedPeriod === period ? { backgroundColor: colors.primary } : {}}
-                >
-                  {period.charAt(0).toUpperCase() + period.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <div className="min-w-full">
-              <div className="flex justify-between mb-2 text-sm text-gray-600">
-                {charts.weeklyAttendanceTrend?.map(day => (
-                  <div key={day.date} className="text-center flex-1">
-                    {day.day}
-                  </div>
-                ))}
-              </div>
-              <div className="relative h-64">
-                <CanvasChart data={charts.weeklyAttendanceTrend} colors={colors} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Designation Distribution */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold" style={{ color: colors.primary }}>
-              Designation Distribution
-            </h2>
-            <Briefcase className="w-5 h-5" style={{ color: colors.secondary }} />
-          </div>
-          <div className="space-y-3">
-            {charts.designationDistribution?.map((item) => (
-              <div key={item._id}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-700">{item._id || 'Not Specified'}</span>
-                  <span className="font-semibold" style={{ color: colors.primary }}>
-                    {item.count}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${(item.count / overview.totalTeachers) * 100}%`,
-                      backgroundColor: colors.secondary
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Leave Requests */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold" style={{ color: colors.primary }}>
-              Recent Leave Requests
-            </h2>
-            <FileText className="w-5 h-5" style={{ color: colors.secondary }} />
-          </div>
-          <div className="space-y-3">
-            {recentActivities.leaveRequests?.map((leave) => (
-              <div key={leave._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-800">{leave.teacher?.name}</p>
-                  <p className="text-sm text-gray-500">{leave.teacher?.designation}</p>
-                </div>
-                <div className="text-right">
-                  <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                    leave.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    leave.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {leave.status}
-                  </span>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(leave.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Upcoming Holidays */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold" style={{ color: colors.primary }}>
-              Upcoming Holidays
-            </h2>
-            <Sun className="w-5 h-5" style={{ color: colors.secondary }} />
-          </div>
-          <div className="space-y-3">
-            {upcomingHolidays?.map((holiday) => (
-              <div key={holiday._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-800">{holiday.name}</p>
-                  <p className="text-sm text-gray-500">{holiday.description}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold" style={{ color: colors.primary }}>
-                    {new Date(holiday.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
-                  </p>
-                  <p className="text-xs text-gray-500">{holiday.type}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Registrations */}
-      <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold" style={{ color: colors.primary }}>
-            Recent Teacher Registrations
-          </h2>
-          <GraduationCap className="w-5 h-5" style={{ color: colors.secondary }} />
-        </div>
-        <div className="overflow-x-auto">
+      {/* Table - Only Photo, Name+Email, Status - No Headers */}
+      <div className="overflow-x-auto">
+        {items.length > 0 ? (
           <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4 text-sm font-semibold" style={{ color: colors.primary }}>Name</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold" style={{ color: colors.primary }}>Email</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold" style={{ color: colors.primary }}>Designation</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold" style={{ color: colors.primary }}>Status</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold" style={{ color: colors.primary }}>Registered On</th>
-              </tr>
-            </thead>
             <tbody>
-              {recentActivities.newTeachers?.map((teacher) => (
-                <tr key={teacher._id} className="border-b hover:bg-gray-50">
-                  <td className="py-3 px-4 text-gray-800">{teacher.name}</td>
-                  <td className="py-3 px-4 text-gray-600">{teacher.email}</td>
-                  <td className="py-3 px-4 text-gray-600">{teacher.designation || 'N/A'}</td>
-                  <td className="py-3 px-4">
-                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                      teacher.isVerified 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {teacher.isVerified ? 'Verified' : 'Pending'}
-                    </span>
+              {items.map((teacher, idx) => (
+                <tr
+                  key={teacher.id || idx}
+                  className="border-b hover:bg-gray-50 transition-colors"
+                >
+                  {/* Photo Column */}
+                  <td className="py-1 px-1 w-16">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                      {teacher.photo ? (
+                        <img
+                          src={teacher.photo}
+                          alt={teacher.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-5 h-5 text-gray-500" />
+                      )}
+                    </div>
                   </td>
-                  <td className="py-3 px-4 text-gray-600">
-                    {new Date(teacher.createdAt).toLocaleDateString()}
+
+                  {/* Name + Email Column */}
+                  <td className="">
+                    <p className="font-medium text-gray-800">{teacher.name}</p>
+                    <p className="text-xs text-gray-500">{teacher.email}</p>
+                  </td>
+
+                  {/* Status Column */}
+                  <td className="py-3 px-4 w-28">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium`}
+                      style={{ backgroundColor: status.bg, color: status.text }}
+                    >
+                      {status.label}
+                    </span>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        ) : (
+          <div className="text-center py-12">
+            <Icon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p className="text-gray-500">No {title.toLowerCase()} for today</p>
+          </div>
+        )}
       </div>
-    </div>
-  );
-};
 
-// Helper Components
-const StatCard = ({ title, value, icon: Icon, color, trend, trendLabel, subValue }) => (
-  <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-    <div className="flex items-center justify-between mb-3">
-      <Icon className="w-8 h-8" style={{ color }} />
-      {trend !== undefined && (
-        <div className="flex items-center gap-1 text-sm text-gray-500">
-          <TrendingUp className="w-3 h-3" style={{ color }} />
-          <span>{trend}</span>
-          <span>{trendLabel}</span>
+      {/* Pagination Dots */}
+      {totalPages > 1 && (
+        <div className="p-3 border-t bg-gray-50 flex justify-center gap-1 overflow-x-auto">
+          {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+            let pageNum;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+
+            return (
+              <button
+                key={pageNum}
+                onClick={() => onPageChange(pageNum - 1)}
+                className={`w-8 h-8 rounded-lg text-sm transition-colors ${
+                  currentPage === pageNum
+                    ? "text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+                style={
+                  currentPage === pageNum ? { backgroundColor: color } : {}
+                }
+              >
+                {pageNum}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
-    <h3 className="text-2xl font-bold mb-1" style={{ color }}>{value}</h3>
-    <p className="text-gray-600 text-sm">{title}</p>
-    {subValue && <p className="text-xs text-gray-400 mt-2">{subValue}</p>}
+  );
+};
+
+// Stat Card Component
+const StatCard = ({ title, value, icon: Icon, color }) => (
+  <div className="bg-white rounded-xl shadow-sm p-3 md:p-6 hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between mb-2 md:mb-3">
+      <div
+        className="p-1.5 md:p-2 rounded-lg"
+        style={{ backgroundColor: `${color}20` }}
+      >
+        <Icon className="w-4 h-4 md:w-6 md:h-6" style={{ color }} />
+      </div>
+    </div>
+    <h3
+      className="text-xl md:text-2xl font-bold mb-0.5 md:mb-1"
+      style={{ color }}
+    >
+      {value}
+    </h3>
+    <p className="text-gray-600 text-xs md:text-sm">{title}</p>
   </div>
 );
-
-const AttendanceBar = ({ label, count, total, color, icon: Icon }) => {
-  const percentage = total > 0 ? (count / total) * 100 : 0;
-  return (
-    <div>
-      <div className="flex justify-between text-sm mb-1">
-        <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4" style={{ color: color === 'gray' ? '#9CA3AF' : color }} />
-          <span className="text-gray-700">{label}</span>
-        </div>
-        <span className="font-medium" style={{ color: color === 'gray' ? '#6B7280' : color }}>
-          {count} ({percentage.toFixed(1)}%)
-        </span>
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${percentage}%`, backgroundColor: color === 'gray' ? '#9CA3AF' : color }}
-        />
-      </div>
-    </div>
-  );
-};
-
-const StatusCard = ({ label, count, total, color, icon: Icon }) => {
-  const percentage = total > 0 ? (count / total) * 100 : 0;
-  return (
-    <div>
-      <div className="flex justify-between text-sm mb-1">
-        <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4" style={{ color: color === 'gray' ? '#9CA3AF' : color }} />
-          <span className="text-gray-700">{label}</span>
-        </div>
-        <span className="font-medium" style={{ color: color === 'gray' ? '#6B7280' : color }}>
-          {count} ({percentage.toFixed(1)}%)
-        </span>
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${percentage}%`, backgroundColor: color === 'gray' ? '#9CA3AF' : color }}
-        />
-      </div>
-    </div>
-  );
-};
-
-// Simple Canvas-based Chart Component
-const CanvasChart = ({ data, colors }) => {
-  const canvasRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (!canvasRef.current || !data) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width = canvas.offsetWidth;
-    const height = canvas.height = canvas.offsetHeight;
-    
-    ctx.clearRect(0, 0, width, height);
-    
-    if (!data.length) return;
-    
-    const maxValue = Math.max(...data.map(d => d.present + d.halfDay * 0.5));
-    const barWidth = (width - 40) / data.length - 4;
-    
-    data.forEach((day, index) => {
-      const x = 20 + index * (barWidth + 4);
-      const attendanceValue = day.present + day.halfDay * 0.5;
-      const barHeight = (attendanceValue / maxValue) * (height - 60);
-      
-      // Draw bar
-      ctx.fillStyle = colors.primary;
-      ctx.fillRect(x, height - 30 - barHeight, barWidth, barHeight);
-      
-      // Draw value on top of bar
-      ctx.fillStyle = colors.primary;
-      ctx.font = '10px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${day.attendanceRate}%`, x + barWidth / 2, height - 35 - barHeight);
-    });
-  }, [data, colors]);
-
-  return <canvas ref={canvasRef} className="w-full h-full" />;
-};
 
 export default Dashboard;

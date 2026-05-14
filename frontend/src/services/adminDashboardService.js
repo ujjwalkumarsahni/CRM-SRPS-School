@@ -9,32 +9,15 @@ const adminDashboardService = {
     return response.data;
   },
 
-  // Get quick statistics
-  getQuickStats: async () => {
-    const response = await api.get('/dashboard/dashboard/quick-stats');
+  getTodaySummary: async () => {
+  try {
+    const response = await api.get('/admin/dashboard/summary');
     return response.data;
-  },
-
-  // Get attendance trend
-  getAttendanceTrend: async () => {
-    const response = await api.get('/dashboard/dashboard/attendance-trend');
-    return response.data;
-  },
-
-  // Get teacher performance report
-  getTeacherPerformanceReport: async () => {
-    const response = await api.get('/dashboard/dashboard/teacher-performance');
-    return response.data;
-  },
-
-  // Export dashboard data
-  exportDashboardData: async () => {
-    const response = await api.get('/dashboard/dashboard/export', {
-      responseType: 'blob',
-    });
-
-    return response.data;
-  },
+  } catch (error) {
+    console.error('Error fetching today summary:', error);
+    throw error.response?.data || { message: 'Failed to fetch summary' };
+  }
+}
 };
 
 export default adminDashboardService;

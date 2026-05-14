@@ -5,10 +5,7 @@ const { protect } = require('../middlewares/auth');
 const roleCheck = require('../middlewares/roleCheck');
 const {
   getDashboardData,
-  getQuickStats,
-  getAttendanceTrend,
-  getTeacherPerformanceReport,
-  exportDashboardData
+  getTodaySummary
 } = require("../controllers/adminDashboardController");
 
 // All dashboard routes require authentication and admin access
@@ -16,10 +13,9 @@ router.use(protect);
 router.use(roleCheck('admin'));
 
 // Main dashboard endpoints
-router.get("/dashboard", getDashboardData);
-router.get("/dashboard/quick-stats", getQuickStats);
-router.get("/dashboard/attendance-trend", getAttendanceTrend);
-router.get("/dashboard/teacher-performance", getTeacherPerformanceReport);
-router.get("/dashboard/export", exportDashboardData);
+router.get('/dashboard', getDashboardData);
+
+// Get today's summary only (lightweight)
+router.get('/dashboard/summary', getTodaySummary);
 
 module.exports = router;
