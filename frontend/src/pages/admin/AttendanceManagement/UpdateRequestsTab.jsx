@@ -387,7 +387,7 @@ const UpdateRequestsTab = () => {
                   ? "text-white" 
                   : "bg-gray-200 text-gray-600 hover:bg-gray-300"
               }`}
-              style={filter === "approved" ? { backgroundColor: '#10b981' } : {}}
+              style={filter === "approved" ? { backgroundColor: '#0B2248' } : {}}
             >
               Approved
             </button>

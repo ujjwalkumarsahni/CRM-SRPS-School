@@ -7,7 +7,9 @@ import {
   RefreshCw,
   Edit,
   X,
-  AlertCircle
+  AlertCircle,
+  Gift,
+  Loader
 } from "lucide-react";
 import attendanceService from "../../services/attendanceService";
 import Swal from "sweetalert2";
@@ -19,6 +21,8 @@ const ViewAttendance = () => {
     absent: 0,
     halfDay: 0,
     leave: 0,
+    holiday: 0,
+    sunday: 0,
     presentPercentage: 0
   });
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -48,20 +52,56 @@ const ViewAttendance = () => {
   const fetchMonthlyAttendance = async () => {
     setLoading(true);
     try {
-      const data = await attendanceService.getMyMonthlyAttendance(selectedMonth, selectedYear);
-      setCalendarData(data.data?.calendarData || []);
-      setStats(data.data?.stats || {
-        present: 0,
-        absent: 0,
-        halfDay: 0,
-        leave: 0,
-        presentPercentage: 0
+      const response = await attendanceService.getMyMonthlyAttendance(selectedMonth, selectedYear);
+      const data = response.data;
+      
+      setCalendarData(data.calendarData || []);
+      
+      // Calculate stats from calendar data
+      const workingDays = data.calendarData.filter(
+        d => !d.isSunday && !d.isHoliday
+      ).length;
+      
+      const presentCount = data.calendarData.filter(
+        d => d.attendance?.status === "present" && !d.isSunday && !d.isHoliday
+      ).length;
+      
+      const halfDayCount = data.calendarData.filter(
+        d => d.attendance?.status === "half-day" && !d.isSunday && !d.isHoliday
+      ).length;
+      
+      const absentCount = data.calendarData.filter(
+        d => d.attendance?.status === "absent" && !d.isSunday && !d.isHoliday
+      ).length;
+      
+      const leaveCount = data.calendarData.filter(
+        d => d.attendance?.status === "leave" && !d.isSunday && !d.isHoliday
+      ).length;
+      
+      const holidayCount = data.calendarData.filter(d => d.isHoliday).length;
+      const sundayCount = data.calendarData.filter(d => d.isSunday && !d.isHoliday).length;
+      
+      // Calculate attendance percentage (present + half-day*0.5) / workingDays * 100
+      const totalPresentValue = presentCount + (halfDayCount * 0.5);
+      const presentPercentage = workingDays > 0 
+        ? ((totalPresentValue / workingDays) * 100).toFixed(1)
+        : 0;
+      
+      setStats({
+        present: presentCount,
+        absent: absentCount,
+        halfDay: halfDayCount,
+        leave: leaveCount,
+        holiday: holidayCount,
+        sunday: sundayCount,
+        presentPercentage: parseFloat(presentPercentage)
       });
     } catch (error) {
+      console.error("Error fetching attendance:", error);
       Swal.fire({
         icon: "error",
         title: "Error!",
-        text: "Failed to fetch attendance",
+        text: error.response?.data?.error || "Failed to fetch attendance",
         confirmButtonColor: "#0D5166"
       });
     } finally {
@@ -70,7 +110,6 @@ const ViewAttendance = () => {
   };
 
   const handleEditRequest = (attendance, date, day, isHoliday, holidayName, isSunday) => {
-    // Check if it's a holiday
     if (isHoliday) {
       Swal.fire({
         icon: "warning",
@@ -86,7 +125,6 @@ const ViewAttendance = () => {
       return;
     }
 
-    // Check if it's a Sunday
     if (isSunday) {
       Swal.fire({
         icon: "warning",
@@ -97,7 +135,6 @@ const ViewAttendance = () => {
       return;
     }
 
-    // Check if status is 'leave'
     if (attendance?.status === "leave") {
       Swal.fire({
         icon: "warning",
@@ -113,7 +150,6 @@ const ViewAttendance = () => {
       return;
     }
 
-    // Check if attendance exists
     if (!attendance) {
       Swal.fire({
         icon: "warning",
@@ -166,12 +202,13 @@ const ViewAttendance = () => {
 
     try {
       const updateData = {
-        attendanceId: selectedAttendance._id,
-        status: editForm.status,
-        workReport: editForm.workReport,
-        reason: editForm.reason,
-        requestedChanges: {}
-      };
+  attendanceId: selectedAttendance._id,
+  reason: editForm.reason,
+  requestedChanges: {
+    status: editForm.status,
+    workReport: editForm.workReport
+  }
+};
 
       if (editForm.inTime) {
         updateData.requestedChanges.inTime = editForm.inTime;
@@ -213,8 +250,8 @@ const ViewAttendance = () => {
       return { 
         bg: "bg-[#EADDCD]", 
         text: "text-[#0D5166]", 
-        icon: <Calendar size={14} className="text-[#0D5166]" />,
-        displayText: holidayName || "Holiday"
+        icon: <Gift size={14} className="text-[#0D5166]" />,
+        displayText: holidayName ||"Holiday"
       };
     }
     if (isSunday) {
@@ -227,13 +264,13 @@ const ViewAttendance = () => {
     }
     switch (status) {
       case "present":
-        return { bg: "bg-green-100", text: "text-green-700", icon: <CheckCircle size={14} className="text-green-600" />, displayText: "Present" };
+        return { bg: "bg-[#E38A0A]", text: "text-[#F7F7F7]", icon: <CheckCircle size={14} className="text-[#F7F7F7]" />, displayText: "Present" };
       case "absent":
-        return { bg: "bg-red-100", text: "text-red-700", icon: <XCircle size={14} className="text-red-600" />, displayText: "Absent" };
+        return { bg: "bg-red-100", text: "text-[#F7F7F7]", icon: <XCircle size={14} className="text-[#F7F7F7]" />, displayText: "Absent" };
       case "half-day":
-        return { bg: "bg-yellow-100", text: "text-yellow-700", icon: <Clock size={14} className="text-yellow-600" />, displayText: "Half Day" };
+        return { bg: "bg-[#E38A0A]", text: "text-[#F7F7F7]", icon: <Clock size={14} className="bg-[#E38A0A]" />, displayText: "Half Day" };
       case "leave":
-        return { bg: "bg-purple-100", text: "text-purple-700", icon: <Calendar size={14} className="text-purple-600" />, displayText: "Leave" };
+        return { bg: "bg-[#E38A0A]", text: "text-[#F7F7F7]", icon: <Calendar size={14} className="text-[#F7F7F7]" />, displayText: "Leave" };
       default:
         return { bg: "bg-gray-100", text: "text-gray-500", icon: null, displayText: "No record" };
     }
@@ -257,13 +294,9 @@ const ViewAttendance = () => {
   };
 
   const canRequestUpdate = (day) => {
-    // Cannot request update for holidays
     if (day.isHoliday) return false;
-    // Cannot request update for Sundays
     if (day.isSunday) return false;
-    // Cannot request update if status is 'leave'
     if (day.attendance?.status === "leave") return false;
-    // Cannot request update if no attendance record
     if (!day.attendance) return false;
     return true;
   };
@@ -295,43 +328,55 @@ const ViewAttendance = () => {
               </select>
               <button
                 onClick={fetchMonthlyAttendance}
-                className="px-3 py-2 bg-[#0D5166] text-white rounded-lg hover:bg-[#0a3d4f] transition-colors flex items-center gap-2"
+                className="px-3 py-2 bg-[#0B2248] text-white rounded-lg hover:bg-[#0a3d4fc2] transition-colors flex items-center gap-2"
               >
-                <RefreshCw size={14} /> Load
+                <RefreshCw size={14} /> Refresh
               </button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 border-b border-[#EADDCD]">
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">{stats.present || 0}</div>
-            <div className="text-sm text-gray-500">Present</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 p-4 border-b border-[#EADDCD]">
+          <div className="text-center p-3 bg-[#0B2248] rounded-lg">
+            <div className="text-2xl font-bold text-[#F7F7F7]">{stats.present}</div>
+            <div className="text-sm text-[#F7F7F7]">Present</div>
           </div>
-          <div className="text-center p-3 bg-red-50 rounded-lg">
-            <div className="text-2xl font-bold text-red-600">{stats.absent || 0}</div>
-            <div className="text-sm text-gray-500">Absent</div>
+          <div className="text-center p-3 bg-[#0B2248] rounded-lg">
+            <div className="text-2xl font-bold text-[#F7F7F7]">{stats.absent}</div>
+            <div className="text-sm text-[#F7F7F7]">Absent</div>
           </div>
-          <div className="text-center p-3 bg-yellow-50 rounded-lg">
-            <div className="text-2xl font-bold text-yellow-600">{stats.halfDay || 0}</div>
-            <div className="text-sm text-gray-500">Half Day</div>
+          <div className="text-center p-3 bg-[#0B2248] rounded-lg">
+            <div className="text-2xl font-bold text-[#F7F7F7]">{stats.halfDay}</div>
+            <div className="text-sm text-[#F7F7F7]">Half Day</div>
           </div>
-          <div className="text-center p-3 bg-purple-50 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600">{stats.leave || 0}</div>
-            <div className="text-sm text-gray-500">Leave</div>
+          <div className="text-center p-3 bg-[#0B2248] rounded-lg">
+            <div className="text-2xl font-bold text-[#F7F7F7]">{stats.leave}</div>
+            <div className="text-sm text-[#F7F7F7]">Leave</div>
           </div>
-          <div className="text-center p-3 bg-[#EADDCD] rounded-lg">
-            <div className="text-2xl font-bold text-[#0D5166]">{stats.presentPercentage || 0}%</div>
-            <div className="text-sm text-gray-500">Attendance</div>
+          <div className="text-center p-3 bg-[#0B2248] rounded-lg">
+            <div className="text-2xl font-bold text-[#F7F7F7]">{stats.holiday}</div>
+            <div className="text-sm text-[#F7F7F7]">Holidays</div>
+          </div>
+          <div className="text-center p-3 bg-[#0B2248] rounded-lg">
+            <div className="text-2xl font-bold text-[#F7F7F7]">{stats.sunday}</div>
+            <div className="text-sm text-[#F7F7F7]">Sundays</div>
+          </div>
+          <div className="text-center p-3 bg-[#0B2248] rounded-lg">
+            <div className="text-2xl font-bold text-[#F7F7F7]">{stats.presentPercentage}%</div>
+            <div className="text-sm text-[#F7F7F7]">Attendance %</div>
           </div>
         </div>
 
         {/* Loading */}
         {loading && (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0D5166]"></div>
-          </div>
+          <div className="p-2">
+        <div className="text-center">
+          <Loader
+            className="w-12 h-12 animate-spin mx-auto mb-4 text-[#0B2248]"
+          />
+        </div>
+      </div>
         )}
 
         {/* Calendar View */}
@@ -351,7 +396,7 @@ const ViewAttendance = () => {
                 {/* Calendar Grid */}
                 <div className="grid grid-cols-7 gap-1">
                   {Array.from({ length: firstDay }).map((_, i) => (
-                    <div key={`empty-${i}`} className="min-h-[100px] bg-gray-50 rounded-lg"></div>
+                    <div key={`empty-${i}`} className="min-h-[100px] rounded-lg"></div>
                   ))}
                   {calendarData.map((day, idx) => {
                     const statusStyle = getStatusStyle(
@@ -366,27 +411,18 @@ const ViewAttendance = () => {
                     return (
                       <div
                         key={idx}
-                        className={`min-h-[100px] p-2 rounded-lg border transition-all ${
-                          day.isSunday
-                            ? "bg-gray-100 border-gray-200 opacity-60"
-                            : day.isHoliday
-                              ? "bg-[#EADDCD] border-[#0D5166]/20"
-                              : hasAttendance
-                                ? `${statusStyle.bg} border-gray-200 hover:shadow-md`
-                                : "bg-white border-gray-200 hover:bg-gray-50"
-                        }`}
+                        className={`min-h-[100px] p-2 rounded-lg border transition-all `}
                       >
-                        <div className={`text-sm font-medium ${day.isSunday ? "text-red-500" : day.isHoliday ? "text-[#0D5166]" : "text-gray-700"}`}>
+                        <div className={`text-sm font-medium ${day.isSunday && !day.isHoliday ? "text-red-500" : day.isHoliday ? "text-[#0D5166]" : "text-gray-700"}`}>
                           {day.day}
-                          {day.isSunday && <span className="ml-1 text-xs">(Sun)</span>}
+                          {day.isSunday && !day.isHoliday && <span className="ml-1 text-xs">(Sun)</span>}
                         </div>
                         
-                        {hasAttendance || day.isHoliday ? (
+                        {(hasAttendance || day.isHoliday || day.isSunday) ? (
                           <div className="mt-2">
                             <div className="flex items-center justify-between gap-1">
                               <div className="flex items-center gap-1 text-xs font-medium">
-                                {statusStyle.icon}
-                                <span className="capitalize">{statusStyle.displayText}</span>
+                                <span className="capitalize text-xs">{statusStyle.displayText}</span>
                               </div>
                               {showEditButton && (
                                 <button
@@ -405,9 +441,14 @@ const ViewAttendance = () => {
                                 </button>
                               )}
                             </div>
-                            {day.attendance?.inTime && (
+                            {day.attendance?.inTime && day.attendance?.inTime?.time && (
                               <div className="text-xs text-gray-500 mt-1">
-                                {formatTime(day.attendance.inTime.time)}
+                                In: {formatTime(day.attendance.inTime.time)}
+                              </div>
+                            )}
+                            {day.attendance?.outTime && day.attendance?.outTime?.time && (
+                              <div className="text-xs text-gray-500">
+                                Out: {formatTime(day.attendance.outTime.time)}
                               </div>
                             )}
                             {day.attendance?.requestStatus === 'pending' && (
@@ -435,7 +476,7 @@ const ViewAttendance = () => {
       {showEditModal && selectedAttendance && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-[#0D5166] px-6 py-4 flex justify-between items-center sticky top-0">
+            <div className="bg-[#0B2248] px-6 py-4 flex justify-between items-center sticky top-0">
               <h3 className="text-white font-semibold text-lg">Request Attendance Update</h3>
               <button onClick={() => setShowEditModal(false)} className="text-white hover:text-gray-200">
                 <X size={20} />

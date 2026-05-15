@@ -4,7 +4,7 @@ const User = require("../models/User");
 const Holiday = require("../models/Holiday");
 const LeaveRequest = require("../models/LeaveRequest");
 const AttendanceUpdateRequest = require("../models/AttendanceUpdateRequest");
-const { getAddressFromCoordinates  } = require("../utils/locationHelper");
+const { getAddressFromCoordinates } = require("../utils/locationHelper");
 const { sendEmail } = require("../utils/emailTemplates");
 
 // ==================== HELPER FUNCTIONS ====================
@@ -52,7 +52,6 @@ const autoMarkHolidayForAllTeachers = async (date, holidayName) => {
   });
 
   for (const teacher of teachers) {
-
     // Check existing attendance
     const existingAttendance = await Attendance.findOne({
       teacher: teacher._id,
@@ -139,26 +138,25 @@ const markInTime = async (req, res) => {
     const inDateTime = time ? new Date(time) : new Date();
 
     if (!attendance) {
+      attendance = await Attendance.create({
+        teacher: req.user._id,
 
-attendance = await Attendance.create({
-  teacher: req.user._id,
+        date: today,
 
-  date: today,
+        status: "absent",
 
-  status: "absent",
+        inTime: {
+          time: inDateTime,
 
-  inTime: {
-    time: inDateTime,
+          location: {
+            lat: location.lat,
+            lng: location.lng,
+            address,
+          },
+        },
 
-    location: {
-      lat: location.lat,
-      lng: location.lng,
-      address
-    }
-  },
-
-  workReport: workReport || ""
-});
+        workReport: workReport || "",
+      });
     } else if (!attendance.inTime) {
       attendance.inTime = {
         time: inDateTime,
@@ -197,18 +195,18 @@ const markOutTime = async (req, res) => {
     }
 
     // Check if on approved leave
-const activeLeave = await LeaveRequest.findOne({
-  teacher: req.user._id,
-  startDate: { $lte: today },
-  endDate: { $gte: today },
-  status: "approved",
-});
+    const activeLeave = await LeaveRequest.findOne({
+      teacher: req.user._id,
+      startDate: { $lte: today },
+      endDate: { $gte: today },
+      status: "approved",
+    });
 
-if (activeLeave) {
-  return res.status(403).json({
-    error: "You are on approved leave today. Cannot mark out-time.",
-  });
-}
+    if (activeLeave) {
+      return res.status(403).json({
+        error: "You are on approved leave today. Cannot mark out-time.",
+      });
+    }
 
     if (!workReport || workReport.trim() === "") {
       return res
@@ -404,8 +402,7 @@ const getMyMonthlyAttendance = async (req, res) => {
 
 const requestAttendanceUpdate = async (req, res) => {
   try {
-    const { attendanceId, status, workReport, inTime, outTime, reason } =
-      req.body;
+    const { attendanceId, reason, requestedChanges } = req.body;
 
     const attendance = await Attendance.findById(attendanceId);
     if (!attendance) {
@@ -443,28 +440,46 @@ const requestAttendanceUpdate = async (req, res) => {
       });
     }
 
-    const requestedChanges = {};
-    if (status && status !== attendance.status)
-      requestedChanges.status = status;
-    if (workReport && workReport !== attendance.workReport)
-      requestedChanges.workReport = workReport;
-    if (inTime) {
-      const [hours, minutes] = inTime.split(":");
-      const inDateTime = new Date(attendance.date);
-      inDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-      requestedChanges.inTime = inDateTime;
+    const formattedChanges = {};
+
+    if (
+      requestedChanges?.status &&
+      requestedChanges.status !== attendance.status
+    ) {
+      formattedChanges.status = requestedChanges.status;
     }
-    if (outTime) {
-      const [hours, minutes] = outTime.split(":");
+
+    if (
+      requestedChanges?.workReport &&
+      requestedChanges.workReport !== attendance.workReport
+    ) {
+      formattedChanges.workReport = requestedChanges.workReport;
+    }
+
+    if (requestedChanges?.inTime) {
+      const [hours, minutes] = requestedChanges.inTime.split(":");
+
+      const inDateTime = new Date(attendance.date);
+
+      inDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+      formattedChanges.inTime = inDateTime;
+    }
+
+    if (requestedChanges?.outTime) {
+      const [hours, minutes] = requestedChanges.outTime.split(":");
+
       const outDateTime = new Date(attendance.date);
+
       outDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-      requestedChanges.outTime = outDateTime;
+
+      formattedChanges.outTime = outDateTime;
     }
 
     const updateRequest = await AttendanceUpdateRequest.create({
       teacher: req.user._id,
       attendance: attendanceId,
-      requestedChanges,
+      requestedChanges: formattedChanges,
       reason,
     });
 
@@ -988,11 +1003,11 @@ const approveUpdateRequest = async (req, res) => {
     }
 
     // ❌ Cannot update leave attendance
-if (attendance.status === "leave") {
-  return res.status(403).json({
-    error: "Cannot modify approved leave attendance",
-  });
-}
+    if (attendance.status === "leave") {
+      return res.status(403).json({
+        error: "Cannot modify approved leave attendance",
+      });
+    }
 
     // Apply requested changes
     if (request.requestedChanges.status) {
@@ -1002,16 +1017,11 @@ if (attendance.status === "leave") {
       attendance.workReport = request.requestedChanges.workReport;
     }
     if (request.requestedChanges.inTime) {
-      attendance.inTime = {
-        ...attendance.inTime,
-        time: request.requestedChanges.inTime,
-      };
+      attendance.inTime.time = request.requestedChanges.inTime;
     }
+
     if (request.requestedChanges.outTime) {
-      attendance.outTime = {
-        ...attendance.outTime,
-        time: request.requestedChanges.outTime,
-      };
+      attendance.outTime.time = request.requestedChanges.outTime;
     }
 
     attendance.modifiedBy = req.user._id;
@@ -1112,12 +1122,10 @@ const approveOrRejectLeave = async (req, res) => {
 
     // ✅ APPROVED => Lock attendance
     if (status === "approved") {
-
       let current = new Date(leave.startDate);
       const end = new Date(leave.endDate);
 
       while (current <= end) {
-
         const attendanceDate = new Date(current);
         attendanceDate.setHours(0, 0, 0, 0);
 
@@ -1150,7 +1158,6 @@ const approveOrRejectLeave = async (req, res) => {
       message: `Leave ${status} successfully`,
       data: leave,
     });
-
   } catch (error) {
     res.status(500).json({
       error: error.message,
@@ -1158,9 +1165,8 @@ const approveOrRejectLeave = async (req, res) => {
   }
 };
 
-
 // Add at the top with other imports
-const ExcelJS = require('exceljs');
+const ExcelJS = require("exceljs");
 
 // ==================== EXCEL EXPORT CONTROLLERS ====================
 
@@ -1170,11 +1176,13 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
   try {
     const { teacherId } = req.params;
     const { month, year } = req.query;
-    
+
     const currentMonth = month || new Date().getMonth() + 1;
     const currentYear = year || new Date().getFullYear();
 
-    const teacher = await User.findById(teacherId).select("name email designation");
+    const teacher = await User.findById(teacherId).select(
+      "name email designation",
+    );
     if (!teacher) {
       return res.status(404).json({ error: "Teacher not found" });
     }
@@ -1224,20 +1232,26 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
         status = `Holiday (${holiday.name})`;
         holidayCount++;
       } else if (attendance) {
-        status = attendance.status.charAt(0).toUpperCase() + attendance.status.slice(1);
-        inTime = attendance.inTime?.time ? new Date(attendance.inTime.time).toLocaleTimeString() : "-";
-        outTime = attendance.outTime?.time ? new Date(attendance.outTime.time).toLocaleTimeString() : "-";
-        
+        status =
+          attendance.status.charAt(0).toUpperCase() +
+          attendance.status.slice(1);
+        inTime = attendance.inTime?.time
+          ? new Date(attendance.inTime.time).toLocaleTimeString()
+          : "-";
+        outTime = attendance.outTime?.time
+          ? new Date(attendance.outTime.time).toLocaleTimeString()
+          : "-";
+
         // Extract location data
-        inTimeLocation = attendance.inTime?.location 
-          ? `${attendance.inTime.location.address || ''} `
+        inTimeLocation = attendance.inTime?.location
+          ? `${attendance.inTime.location.address || ""} `
           : "-";
         outTimeLocation = attendance.outTime?.location
-          ? `${attendance.outTime.location.address || ''} `
+          ? `${attendance.outTime.location.address || ""} `
           : "-";
-        
+
         workReport = attendance.workReport || "-";
-        
+
         if (attendance.status === "present") presentCount++;
         else if (attendance.status === "absent") absentCount++;
         else if (attendance.status === "half-day") halfDayCount++;
@@ -1248,9 +1262,9 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
       }
 
       calendarData.push({
-        date: date.toLocaleDateString('en-IN'),
+        date: date.toLocaleDateString("en-IN"),
         day: i,
-        weekday: date.toLocaleDateString('en-IN', { weekday: 'long' }),
+        weekday: date.toLocaleDateString("en-IN", { weekday: "long" }),
         status,
         inTime,
         outTime,
@@ -1263,56 +1277,79 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
     }
 
     const workingDays = daysInMonth - sundayCount - holidayCount;
-    const presentPercentage = workingDays > 0 
-      ? (((presentCount + halfDayCount * 0.5) / workingDays) * 100).toFixed(1)
-      : 0;
+    const presentPercentage =
+      workingDays > 0
+        ? (((presentCount + halfDayCount * 0.5) / workingDays) * 100).toFixed(1)
+        : 0;
 
     // Create Excel workbook
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Attendance Management System';
+    workbook.creator = "Attendance Management System";
     workbook.created = new Date();
 
     // Add styles
     const headerStyle = {
-      font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D5166' } },
-      alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
-      border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+      font: { bold: true, color: { argb: "FFFFFFFF" }, size: 12 },
+      fill: {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF0D5166" },
+      },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      },
     };
 
     const titleStyle = {
-      font: { bold: true, size: 14, color: { argb: 'FF0D5166' } },
-      alignment: { horizontal: 'center' }
+      font: { bold: true, size: 14, color: { argb: "FF0D5166" } },
+      alignment: { horizontal: "center" },
     };
 
     const dataStyle = {
-      alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
-      border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      },
     };
 
     // Sheet 1: Monthly Attendance Report
-    const sheet1 = workbook.addWorksheet('Monthly Attendance Report');
+    const sheet1 = workbook.addWorksheet("Monthly Attendance Report");
 
     // Title
-    sheet1.mergeCells('A1:I1');
-    sheet1.getCell('A1').value = `Attendance Report - ${teacher.name} (${months[currentMonth - 1]} ${currentYear})`;
-    sheet1.getCell('A1').style = titleStyle;
+    sheet1.mergeCells("A1:I1");
+    sheet1.getCell("A1").value =
+      `Attendance Report - ${teacher.name} (${months[currentMonth - 1]} ${currentYear})`;
+    sheet1.getCell("A1").style = titleStyle;
     sheet1.getRow(1).height = 30;
 
     // Summary Section
-    sheet1.mergeCells('A3:C3');
-    sheet1.getCell('A3').value = 'Summary Statistics';
-    sheet1.getCell('A3').style = { font: { bold: true, size: 12 }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEADDCD' } } };
+    sheet1.mergeCells("A3:C3");
+    sheet1.getCell("A3").value = "Summary Statistics";
+    sheet1.getCell("A3").style = {
+      font: { bold: true, size: 12 },
+      fill: {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFEADDCD" },
+      },
+    };
 
     const summaryData = [
-      ['Total Working Days', workingDays],
-      ['Present', presentCount],
-      ['Absent', absentCount],
-      ['Half Day', halfDayCount],
-      ['Leave', leaveCount],
-      ['Holidays', holidayCount],
-      ['Sundays', sundayCount],
-      ['Attendance Percentage', `${presentPercentage}%`]
+      ["Total Working Days", workingDays],
+      ["Present", presentCount],
+      ["Absent", absentCount],
+      ["Half Day", halfDayCount],
+      ["Leave", leaveCount],
+      ["Holidays", holidayCount],
+      ["Sundays", sundayCount],
+      ["Attendance Percentage", `${presentPercentage}%`],
     ];
 
     summaryData.forEach((row, index) => {
@@ -1324,7 +1361,17 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
     });
 
     // Headers - Updated with Location columns
-    const headers = ['Date', 'Day', 'Weekday', 'Status', 'In Time', 'In Time Location', 'Out Time', 'Out Time Location', 'Work Report'];
+    const headers = [
+      "Date",
+      "Day",
+      "Weekday",
+      "Status",
+      "In Time",
+      "In Time Location",
+      "Out Time",
+      "Out Time Location",
+      "Work Report",
+    ];
     const headerRow = sheet1.addRow(headers);
     headerRow.eachCell((cell) => {
       cell.style = headerStyle;
@@ -1341,45 +1388,49 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
         day.inTimeLocation,
         day.outTime,
         day.outTimeLocation,
-        day.workReport
+        day.workReport,
       ]);
       row.eachCell((cell) => {
         cell.style = dataStyle;
         if (day.isSunday || day.isHoliday) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE68A' } };
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFFDE68A" },
+          };
         }
       });
     });
 
     // Set column widths
-    sheet1.getColumn(1).width = 15;  // Date
-    sheet1.getColumn(2).width = 8;   // Day
-    sheet1.getColumn(3).width = 15;  // Weekday
-    sheet1.getColumn(4).width = 20;  // Status
-    sheet1.getColumn(5).width = 12;  // In Time
-    sheet1.getColumn(6).width = 45;  // In Time Location
-    sheet1.getColumn(7).width = 12;  // Out Time
-    sheet1.getColumn(8).width = 45;  // Out Time Location
-    sheet1.getColumn(9).width = 30;  // Work Report
+    sheet1.getColumn(1).width = 15; // Date
+    sheet1.getColumn(2).width = 8; // Day
+    sheet1.getColumn(3).width = 15; // Weekday
+    sheet1.getColumn(4).width = 20; // Status
+    sheet1.getColumn(5).width = 12; // In Time
+    sheet1.getColumn(6).width = 45; // In Time Location
+    sheet1.getColumn(7).width = 12; // Out Time
+    sheet1.getColumn(8).width = 45; // Out Time Location
+    sheet1.getColumn(9).width = 30; // Work Report
 
     // Sheet 2: Detailed Analysis
-    const sheet2 = workbook.addWorksheet('Detailed Analysis');
+    const sheet2 = workbook.addWorksheet("Detailed Analysis");
 
-    sheet2.mergeCells('A1:B1');
-    sheet2.getCell('A1').value = `Attendance Analysis - ${teacher.name}`;
-    sheet2.getCell('A1').style = titleStyle;
+    sheet2.mergeCells("A1:B1");
+    sheet2.getCell("A1").value = `Attendance Analysis - ${teacher.name}`;
+    sheet2.getCell("A1").style = titleStyle;
 
     const analysisData = [
-      ['Metric', 'Value'],
-      ['Total Days in Month', daysInMonth],
-      ['Working Days', workingDays],
-      ['Present Days', presentCount],
-      ['Present Percentage', `${presentPercentage}%`],
-      ['Absent Days', absentCount],
-      ['Half Days', halfDayCount],
-      ['Leave Days', leaveCount],
-      ['Holidays', holidayCount],
-      ['Sundays', sundayCount]
+      ["Metric", "Value"],
+      ["Total Days in Month", daysInMonth],
+      ["Working Days", workingDays],
+      ["Present Days", presentCount],
+      ["Present Percentage", `${presentPercentage}%`],
+      ["Absent Days", absentCount],
+      ["Half Days", halfDayCount],
+      ["Leave Days", leaveCount],
+      ["Holidays", holidayCount],
+      ["Sundays", sundayCount],
     ];
 
     analysisData.forEach((row, index) => {
@@ -1387,8 +1438,15 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
       sheet2.getCell(`A${rowNum}`).value = row[0];
       sheet2.getCell(`B${rowNum}`).value = row[1];
       if (index === 0) {
-        sheet2.getRow(rowNum).eachCell(cell => {
-          cell.style = { font: { bold: true }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEADDCD' } } };
+        sheet2.getRow(rowNum).eachCell((cell) => {
+          cell.style = {
+            font: { bold: true },
+            fill: {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFEADDCD" },
+            },
+          };
         });
       }
     });
@@ -1397,12 +1455,17 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
     sheet2.getColumn(2).width = 15;
 
     // Set response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=Attendance_${teacher.name}_${months[currentMonth - 1]}_${currentYear}.xlsx`);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Attendance_${teacher.name}_${months[currentMonth - 1]}_${currentYear}.xlsx`,
+    );
 
     await workbook.xlsx.write(res);
     res.end();
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
@@ -1434,32 +1497,51 @@ const downloadAllTeachersAttendanceExcel = async (req, res) => {
 
     // Create Excel workbook
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Attendance Management System';
+    workbook.creator = "Attendance Management System";
     workbook.created = new Date();
 
     const headerStyle = {
-      font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D5166' } },
-      alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
-      border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+      font: { bold: true, color: { argb: "FFFFFFFF" }, size: 11 },
+      fill: {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF0D5166" },
+      },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      },
     };
 
     const titleStyle = {
-      font: { bold: true, size: 14, color: { argb: 'FF0D5166' } },
-      alignment: { horizontal: 'center' }
+      font: { bold: true, size: 14, color: { argb: "FF0D5166" } },
+      alignment: { horizontal: "center" },
     };
 
     // Sheet 1: Summary Report (All Teachers)
-    const summarySheet = workbook.addWorksheet('Summary Report');
+    const summarySheet = workbook.addWorksheet("Summary Report");
 
     // Title
-    summarySheet.mergeCells('A1:H1');
-    summarySheet.getCell('A1').value = `Attendance Summary Report - ${months[currentMonth - 1]} ${currentYear}`;
-    summarySheet.getCell('A1').style = titleStyle;
+    summarySheet.mergeCells("A1:H1");
+    summarySheet.getCell("A1").value =
+      `Attendance Summary Report - ${months[currentMonth - 1]} ${currentYear}`;
+    summarySheet.getCell("A1").style = titleStyle;
     summarySheet.getRow(1).height = 30;
 
     // Headers
-    const summaryHeaders = ['S.No', 'Teacher Name', 'Email', 'Present', 'Absent', 'Half Day', 'Leave', 'Attendance %'];
+    const summaryHeaders = [
+      "S.No",
+      "Teacher Name",
+      "Email",
+      "Present",
+      "Absent",
+      "Half Day",
+      "Leave",
+      "Attendance %",
+    ];
     const headerRow = summarySheet.addRow(summaryHeaders);
     headerRow.eachCell((cell) => {
       cell.style = headerStyle;
@@ -1506,9 +1588,12 @@ const downloadAllTeachersAttendanceExcel = async (req, res) => {
       }
 
       const workingDays = daysInMonth - sundayCount - holidayMap.size;
-      const attendancePercentage = workingDays > 0 
-        ? (((presentCount + halfDayCount * 0.5) / workingDays) * 100).toFixed(1)
-        : 0;
+      const attendancePercentage =
+        workingDays > 0
+          ? (((presentCount + halfDayCount * 0.5) / workingDays) * 100).toFixed(
+              1,
+            )
+          : 0;
 
       teacherData.push({
         serialNo: serialNo++,
@@ -1519,7 +1604,7 @@ const downloadAllTeachersAttendanceExcel = async (req, res) => {
         halfDay: halfDayCount,
         leave: leaveCount,
         attendancePercentage,
-        workingDays
+        workingDays,
       });
     }
 
@@ -1536,12 +1621,17 @@ const downloadAllTeachersAttendanceExcel = async (req, res) => {
         teacher.absent,
         teacher.halfDay,
         teacher.leave,
-        `${teacher.attendancePercentage}%`
+        `${teacher.attendancePercentage}%`,
       ]);
       row.eachCell((cell) => {
         cell.style = {
-          alignment: { horizontal: 'center', vertical: 'middle' },
-          border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+          alignment: { horizontal: "center", vertical: "middle" },
+          border: {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+          },
         };
       });
     });
@@ -1557,14 +1647,25 @@ const downloadAllTeachersAttendanceExcel = async (req, res) => {
     summarySheet.getColumn(8).width = 15;
 
     // Sheet 2: Detailed Teacher-wise Report
-    const detailSheet = workbook.addWorksheet('Detailed Report');
+    const detailSheet = workbook.addWorksheet("Detailed Report");
 
-    detailSheet.mergeCells('A1:I1');
-    detailSheet.getCell('A1').value = `Detailed Attendance Report - ${months[currentMonth - 1]} ${currentYear}`;
-    detailSheet.getCell('A1').style = titleStyle;
+    detailSheet.mergeCells("A1:I1");
+    detailSheet.getCell("A1").value =
+      `Detailed Attendance Report - ${months[currentMonth - 1]} ${currentYear}`;
+    detailSheet.getCell("A1").style = titleStyle;
     detailSheet.getRow(1).height = 30;
 
-    const detailHeaders = ['Teacher', 'Date', 'Day', 'Status', 'In Time', 'Out Time', 'Work Report', 'Remarks', 'Attendance %'];
+    const detailHeaders = [
+      "Teacher",
+      "Date",
+      "Day",
+      "Status",
+      "In Time",
+      "Out Time",
+      "Work Report",
+      "Remarks",
+      "Attendance %",
+    ];
     const detailHeaderRow = detailSheet.addRow(detailHeaders);
     detailHeaderRow.eachCell((cell) => {
       cell.style = headerStyle;
@@ -1604,11 +1705,17 @@ const downloadAllTeachersAttendanceExcel = async (req, res) => {
           status = "Holiday";
           remarks = holiday.name;
         } else if (attendance) {
-          status = attendance.status.charAt(0).toUpperCase() + attendance.status.slice(1);
-          inTime = attendance.inTime?.time ? new Date(attendance.inTime.time).toLocaleTimeString() : "-";
-          outTime = attendance.outTime?.time ? new Date(attendance.outTime.time).toLocaleTimeString() : "-";
+          status =
+            attendance.status.charAt(0).toUpperCase() +
+            attendance.status.slice(1);
+          inTime = attendance.inTime?.time
+            ? new Date(attendance.inTime.time).toLocaleTimeString()
+            : "-";
+          outTime = attendance.outTime?.time
+            ? new Date(attendance.outTime.time).toLocaleTimeString()
+            : "-";
           workReport = attendance.workReport || "-";
-          
+
           if (attendance.status === "present") teacherPresent++;
           else if (attendance.status === "absent") teacherAbsent++;
           else if (attendance.status === "half-day") teacherHalfDay++;
@@ -1620,41 +1727,65 @@ const downloadAllTeachersAttendanceExcel = async (req, res) => {
 
         const row = detailSheet.addRow([
           teacher.name,
-          date.toLocaleDateString('en-IN'),
-          date.toLocaleDateString('en-IN', { weekday: 'long' }),
+          date.toLocaleDateString("en-IN"),
+          date.toLocaleDateString("en-IN", { weekday: "long" }),
           status,
           inTime,
           outTime,
           workReport,
           remarks,
-          ""
+          "",
         ]);
         row.eachCell((cell) => {
           cell.style = {
-            alignment: { horizontal: 'center', vertical: 'middle' },
-            border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+            alignment: { horizontal: "center", vertical: "middle" },
+            border: {
+              top: { style: "thin" },
+              bottom: { style: "thin" },
+              left: { style: "thin" },
+              right: { style: "thin" },
+            },
           };
           if (isSunday || isHoliday) {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE68A' } };
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFFDE68A" },
+            };
           }
         });
       }
 
       // Add teacher summary row
-      const workingDaysForTeacher = daysInMonth - (holidayMap.size) - 4; // Approximate Sundays
-      const teacherPercentage = workingDaysForTeacher > 0 
-        ? (((teacherPresent + teacherHalfDay * 0.5) / workingDaysForTeacher) * 100).toFixed(1)
-        : 0;
-      
+      const workingDaysForTeacher = daysInMonth - holidayMap.size - 4; // Approximate Sundays
+      const teacherPercentage =
+        workingDaysForTeacher > 0
+          ? (
+              ((teacherPresent + teacherHalfDay * 0.5) /
+                workingDaysForTeacher) *
+              100
+            ).toFixed(1)
+          : 0;
+
       const lastRowIndex = detailSheet.rowCount;
       const summaryRow = detailSheet.getRow(lastRowIndex + 1);
-      detailSheet.getCell(`A${lastRowIndex + 1}`).value = `Summary for ${teacher.name}:`;
-      detailSheet.getCell(`H${lastRowIndex + 1}`).value = `P:${teacherPresent} | HD:${teacherHalfDay} | A:${teacherAbsent} | L:${teacherLeave}`;
-      detailSheet.getCell(`I${lastRowIndex + 1}`).value = `${teacherPercentage}%`;
+      detailSheet.getCell(`A${lastRowIndex + 1}`).value =
+        `Summary for ${teacher.name}:`;
+      detailSheet.getCell(`H${lastRowIndex + 1}`).value =
+        `P:${teacherPresent} | HD:${teacherHalfDay} | A:${teacherAbsent} | L:${teacherLeave}`;
+      detailSheet.getCell(`I${lastRowIndex + 1}`).value =
+        `${teacherPercentage}%`;
       detailSheet.getRow(lastRowIndex + 1).eachCell((cell) => {
-        cell.style = { font: { bold: true }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEADDCD' } } };
+        cell.style = {
+          font: { bold: true },
+          fill: {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFEADDCD" },
+          },
+        };
       });
-      
+
       detailSheet.addRow([]); // Empty row for separation
     }
 
@@ -1670,12 +1801,17 @@ const downloadAllTeachersAttendanceExcel = async (req, res) => {
     detailSheet.getColumn(9).width = 15;
 
     // Set response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=All_Teachers_Attendance_${months[currentMonth - 1]}_${currentYear}.xlsx`);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=All_Teachers_Attendance_${months[currentMonth - 1]}_${currentYear}.xlsx`,
+    );
 
     await workbook.xlsx.write(res);
     res.end();
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
@@ -1684,8 +1820,18 @@ const downloadAllTeachersAttendanceExcel = async (req, res) => {
 
 // Helper array for months
 const months = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 module.exports = {

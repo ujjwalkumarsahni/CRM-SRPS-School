@@ -19,8 +19,8 @@ const AttendanceManagement = () => {
           onClick={() => setActiveTab("mark")}
           className={`px-4 md:px-6 py-2 rounded-t-lg transition-all duration-200 ${
             activeTab === "mark"
-              ? "bg-[#0D5166] text-white shadow-lg"
-              : "text-gray-600 hover:bg-[#EADDCD] hover:text-[#0D5166]"
+              ? "bg-[#0B2248] text-white shadow-lg"
+              : "text-gray-600 hover:bg-[#EADDCD] hover:text-[#0b2248e3]"
           }`}
         >
           Mark Attendance
@@ -29,8 +29,8 @@ const AttendanceManagement = () => {
           onClick={() => setActiveTab("view")}
           className={`px-4 md:px-6 py-2 rounded-t-lg transition-all duration-200 ${
             activeTab === "view"
-              ? "bg-[#0D5166] text-white shadow-lg"
-              : "text-gray-600 hover:bg-[#EADDCD] hover:text-[#0D5166]"
+              ? "bg-[#0B2248] text-white shadow-lg"
+              : "text-gray-600 hover:bg-[#EADDCD] hover:text-[#0b2248e3]"
           }`}
         >
           View Attendance
