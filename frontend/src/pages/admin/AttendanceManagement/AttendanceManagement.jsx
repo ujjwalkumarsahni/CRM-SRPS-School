@@ -1702,10 +1702,10 @@ const AttendanceManagement = () => {
   const getStatusStyle = (status, isSunday = false, isHoliday = false) => {
     if (isSunday || isHoliday) {
       return {
-        bg: "bg-purple-100",
-        text: "text-purple-700",
-        border: "border-purple-300",
-        icon: <Calendar size={12} className="text-purple-600" />,
+        bg: colors.secondary, // #E38A0A (orange)
+        text: colors.light, // #F7F7F7 (off-white)
+        border: colors.secondary,
+        icon: <Calendar size={12} style={{ color: colors.primary }} />,
         label: "Holiday",
       };
     }
@@ -1713,41 +1713,45 @@ const AttendanceManagement = () => {
     switch (status) {
       case "present":
         return {
-          bg: "bg-green-100",
-          text: "text-green-700",
-          border: "border-green-300",
-          icon: <CheckCircle size={12} className="text-green-600" />,
+          bg: colors.primary, // #0B2248 (dark blue)
+          text: colors.light, // #F7F7F7 (off-white)
+          border: colors.primary,
+          icon: <CheckCircle size={12} style={{ color: colors.light }} />,
           label: "P",
         };
+
       case "absent":
         return {
-          bg: "bg-red-100",
-          text: "text-red-700",
-          border: "border-red-300",
-          icon: <XCircle size={12} className="text-red-600" />,
+          bg: colors.accent, // #DB2112 (red)
+          text: colors.light, // #F7F7F7 (off-white)
+          border: colors.accent,
+          icon: <XCircle size={12} style={{ color: colors.light }} />,
           label: "A",
         };
+
       case "half-day":
         return {
-          bg: "bg-orange-100",
-          text: "text-orange-700",
-          border: "border-orange-300",
-          icon: <Clock size={12} className="text-orange-600" />,
+          bg: colors.primary, // #0B2248 (dark blue)
+          text: colors.light, // #F7F7F7 (off-white)
+          border: colors.primary,
+          icon: <Clock size={12} style={{ color: colors.light }} />,
           label: "HD",
         };
+
       case "leave":
         return {
-          bg: "bg-blue-100",
-          text: "text-blue-700",
-          border: "border-blue-300",
-          icon: <Calendar size={12} className="text-blue-600" />,
+          bg: colors.secondary, // #E38A0A (orange)
+          text: colors.light, // #F7F7F7 (off-white)
+          border: colors.secondary,
+          icon: <Calendar size={12} style={{ color: colors.light }} />,
           label: "L",
         };
+
       default:
         return {
-          bg: "bg-gray-100",
-          text: "text-gray-600",
-          border: "border-gray-300",
+          bg: colors.light, // #F7F7F7 (off-white)
+          text: colors.primary, // #0B2248 (dark blue)
+          border: colors.primary,
           icon: null,
           label: "-",
         };
@@ -2189,14 +2193,14 @@ const AttendanceManagement = () => {
                                 handleCreateClick(day.date, day);
                               }
                             }}
-                            className={`min-h-15 md:min-h-20 p-1 md:p-1.5 rounded-md border transition-all ${isSunday || isHoliday ? `${style?.bg} ${style?.border} cursor-not-allowed opacity-60` : hasAttendance ? "bg-white border-gray-200 cursor-pointer hover:bg-gray-50" : "bg-white border-dashed border-gray-300 cursor-pointer hover:border-blue-500 hover:bg-blue-50"} ${isHovered && isEditable && hasAttendance ? "shadow-md scale-[1.01]" : ""}`}
+                            className={`min-h-10 md:min-h-20 p-1 md:p-1.5 rounded-md border transition-all`}
                           >
-                            <div className="text-xs md:text-sm font-medium flex justify-between items-center text-gray-700">
+                            <div className="text-xs md:text-sm font-medium flex justify-between items-center">
                               <span>{day.day}</span>
                               {(isSunday || isHoliday) && (
                                 <Calendar
                                   size={10}
-                                  className="text-purple-600"
+                                  style={{ color: colors.secondary }}
                                 />
                               )}
                               {!isSunday && !isHoliday && !hasAttendance && (
@@ -2209,29 +2213,24 @@ const AttendanceManagement = () => {
                             </div>
                             {isSunday || isHoliday ? (
                               <div className="mt-1 text-center">
-                                <div className="text-[9px] md:text-xs flex items-center justify-center gap-0.5 text-purple-600">
+                                <div
+                                  className="text-[9px] md:text-xs flex items-center justify-center gap-0.5"
+                                  style={{ color: colors.secondary }}
+                                >
                                   <span>Holiday</span>
                                 </div>
                               </div>
                             ) : hasAttendance ? (
                               <div className="mt-1">
                                 <div
-                                  className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full ${style?.bg} text-[9px] md:text-xs font-medium`}
+                                  className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] md:text-xs font-medium`}
+                                  style={{
+                                    backgroundColor: style?.bg,
+                                    color: style?.text,
+                                  }}
                                 >
-                                  <span className={style?.text}>
-                                    {style?.label}
-                                  </span>
+                                  <span>{style?.label}</span>
                                 </div>
-                                {day.attendance.inTime && (
-                                  <div className="text-[8px] md:text-xs text-gray-500 mt-1 hidden sm:block">
-                                    {new Date(
-                                      day.attendance.inTime.time,
-                                    ).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </div>
-                                )}
                               </div>
                             ) : (
                               <div className="mt-1 text-[9px] md:text-xs text-gray-400 text-center hidden sm:block">
@@ -2325,7 +2324,13 @@ const AttendanceManagement = () => {
                               </td>
                               <td className="py-2 px-2 md:px-3">
                                 {isSunday || isHoliday ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-600">
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                                    style={{
+                                      backgroundColor: style?.bg,
+                                      color: style?.text,
+                                    }}
+                                  >
                                     <Calendar size={12} />{" "}
                                     <span className="hidden xs:inline">
                                       Holiday
@@ -2333,9 +2338,12 @@ const AttendanceManagement = () => {
                                   </span>
                                 ) : day.attendance ? (
                                   <span
-                                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${style?.bg} ${style?.text}`}
+                                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium`}
+                                    style={{
+                                      backgroundColor: style?.bg,
+                                      color: style?.text,
+                                    }}
                                   >
-                                    {style?.icon}
                                     <span className="capitalize">
                                       {style?.label === "P"
                                         ? "Present"
@@ -2353,7 +2361,8 @@ const AttendanceManagement = () => {
                                     onClick={() =>
                                       handleCreateClick(day.date, day)
                                     }
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-50"
+                                    style={{ color: colors.primary }}
                                   >
                                     <Plus size={12} />
                                     <span className="hidden xs:inline">
@@ -2508,7 +2517,7 @@ const AttendanceManagement = () => {
                     }
                     className="w-full px-3 py-2 border rounded-lg"
                   />
-                  {selectedAttendance.inTime?.time && (
+                  {/* {selectedAttendance.inTime?.time && (
                     <p className="text-xs text-gray-400 mt-1">
                       Current:{" "}
                       {new Date(
@@ -2518,7 +2527,7 @@ const AttendanceManagement = () => {
                         minute: "2-digit",
                       })}
                     </p>
-                  )}
+                  )} */}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2532,7 +2541,7 @@ const AttendanceManagement = () => {
                     }
                     className="w-full px-3 py-2 border rounded-lg"
                   />
-                  {selectedAttendance.outTime?.time && (
+                  {/* {selectedAttendance.outTime?.time && (
                     <p className="text-xs text-gray-400 mt-1">
                       Current:{" "}
                       {new Date(
@@ -2542,23 +2551,48 @@ const AttendanceManagement = () => {
                         minute: "2-digit",
                       })}
                     </p>
-                  )}
+                  )} */}
                 </div>
               </div>
 
+              {/* In-Time Location */}
               {selectedAttendance.inTime?.location && (
                 <div
-                  className="p-3 rounded-lg"
+                  className="p-4 rounded-xl border"
                   style={{ backgroundColor: colors.light }}
                 >
                   <p
-                    className="text-xs font-semibold mb-2 flex items-center gap-1"
+                    className="text-sm font-semibold mb-3 flex items-center gap-2"
                     style={{ color: colors.primary }}
                   >
-                    <MapPin size={12} /> Location
+                    <MapPin size={16} />
+                    Check-In Location
                   </p>
-                  <p className="text-sm text-gray-700">
+
+                  <p className="text-sm text-gray-700 break-words leading-6">
                     {selectedAttendance.inTime.location.address ||
+                      "Location not available"}
+                  </p>
+                </div>
+              )}
+
+              {/* Out-Time Location */}
+
+              {selectedAttendance.outTime?.location && (
+                <div
+                  className="p-4 rounded-xl border mt-3"
+                  style={{ backgroundColor: colors.light }}
+                >
+                  <p
+                    className="text-sm font-semibold mb-3 flex items-center gap-2"
+                    style={{ color: colors.primary }}
+                  >
+                    <MapPin size={16} />
+                    Check-Out Location
+                  </p>
+
+                  <p className="text-sm text-gray-700 break-words leading-6">
+                    {selectedAttendance.outTime.location.address ||
                       "Location not available"}
                   </p>
                 </div>

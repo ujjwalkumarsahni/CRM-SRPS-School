@@ -4,7 +4,7 @@ const User = require("../models/User");
 const Holiday = require("../models/Holiday");
 const LeaveRequest = require("../models/LeaveRequest");
 const AttendanceUpdateRequest = require("../models/AttendanceUpdateRequest");
-const { getAddressFromCoordinates } = require("../utils/locationHelper");
+const { getAddressFromCoordinates  } = require("../utils/locationHelper");
 const { sendEmail } = require("../utils/emailTemplates");
 
 // ==================== HELPER FUNCTIONS ====================
@@ -139,16 +139,26 @@ const markInTime = async (req, res) => {
     const inDateTime = time ? new Date(time) : new Date();
 
     if (!attendance) {
-      attendance = await Attendance.create({
-        teacher: req.user._id,
-        date: today,
-        status: "absent",
-        inTime: {
-          time: inDateTime,
-          location: { lat: location.lat, lng: location.lng, address },
-        },
-        workReport: workReport || "",
-      });
+
+attendance = await Attendance.create({
+  teacher: req.user._id,
+
+  date: today,
+
+  status: "absent",
+
+  inTime: {
+    time: inDateTime,
+
+    location: {
+      lat: location.lat,
+      lng: location.lng,
+      address
+    }
+  },
+
+  workReport: workReport || ""
+});
     } else if (!attendance.inTime) {
       attendance.inTime = {
         time: inDateTime,
@@ -1155,6 +1165,7 @@ const ExcelJS = require('exceljs');
 // ==================== EXCEL EXPORT CONTROLLERS ====================
 
 // Download attendance for a specific teacher
+// Download attendance for a specific teacher
 const downloadTeacherAttendanceExcel = async (req, res) => {
   try {
     const { teacherId } = req.params;
@@ -1202,6 +1213,8 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
       let status = "";
       let inTime = "";
       let outTime = "";
+      let inTimeLocation = "";
+      let outTimeLocation = "";
       let workReport = "";
 
       if (isSunday) {
@@ -1214,6 +1227,15 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
         status = attendance.status.charAt(0).toUpperCase() + attendance.status.slice(1);
         inTime = attendance.inTime?.time ? new Date(attendance.inTime.time).toLocaleTimeString() : "-";
         outTime = attendance.outTime?.time ? new Date(attendance.outTime.time).toLocaleTimeString() : "-";
+        
+        // Extract location data
+        inTimeLocation = attendance.inTime?.location 
+          ? `${attendance.inTime.location.address || ''} `
+          : "-";
+        outTimeLocation = attendance.outTime?.location
+          ? `${attendance.outTime.location.address || ''} `
+          : "-";
+        
         workReport = attendance.workReport || "-";
         
         if (attendance.status === "present") presentCount++;
@@ -1232,6 +1254,8 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
         status,
         inTime,
         outTime,
+        inTimeLocation,
+        outTimeLocation,
         workReport,
         isSunday,
         isHoliday,
@@ -1252,7 +1276,7 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
     const headerStyle = {
       font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 },
       fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D5166' } },
-      alignment: { horizontal: 'center', vertical: 'middle' },
+      alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
       border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
     };
 
@@ -1262,7 +1286,7 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
     };
 
     const dataStyle = {
-      alignment: { horizontal: 'center', vertical: 'middle' },
+      alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
       border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
     };
 
@@ -1270,7 +1294,7 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
     const sheet1 = workbook.addWorksheet('Monthly Attendance Report');
 
     // Title
-    sheet1.mergeCells('A1:G1');
+    sheet1.mergeCells('A1:I1');
     sheet1.getCell('A1').value = `Attendance Report - ${teacher.name} (${months[currentMonth - 1]} ${currentYear})`;
     sheet1.getCell('A1').style = titleStyle;
     sheet1.getRow(1).height = 30;
@@ -1299,8 +1323,8 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
       sheet1.getCell(`B${rowNum}`).style = dataStyle;
     });
 
-    // Headers
-    const headers = ['Date', 'Day', 'Weekday', 'Status', 'In Time', 'Out Time', 'Work Report'];
+    // Headers - Updated with Location columns
+    const headers = ['Date', 'Day', 'Weekday', 'Status', 'In Time', 'In Time Location', 'Out Time', 'Out Time Location', 'Work Report'];
     const headerRow = sheet1.addRow(headers);
     headerRow.eachCell((cell) => {
       cell.style = headerStyle;
@@ -1314,7 +1338,9 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
         day.weekday,
         day.status,
         day.inTime,
+        day.inTimeLocation,
         day.outTime,
+        day.outTimeLocation,
         day.workReport
       ]);
       row.eachCell((cell) => {
@@ -1326,13 +1352,15 @@ const downloadTeacherAttendanceExcel = async (req, res) => {
     });
 
     // Set column widths
-    sheet1.getColumn(1).width = 15;
-    sheet1.getColumn(2).width = 8;
-    sheet1.getColumn(3).width = 15;
-    sheet1.getColumn(4).width = 20;
-    sheet1.getColumn(5).width = 12;
-    sheet1.getColumn(6).width = 12;
-    sheet1.getColumn(7).width = 30;
+    sheet1.getColumn(1).width = 15;  // Date
+    sheet1.getColumn(2).width = 8;   // Day
+    sheet1.getColumn(3).width = 15;  // Weekday
+    sheet1.getColumn(4).width = 20;  // Status
+    sheet1.getColumn(5).width = 12;  // In Time
+    sheet1.getColumn(6).width = 45;  // In Time Location
+    sheet1.getColumn(7).width = 12;  // Out Time
+    sheet1.getColumn(8).width = 45;  // Out Time Location
+    sheet1.getColumn(9).width = 30;  // Work Report
 
     // Sheet 2: Detailed Analysis
     const sheet2 = workbook.addWorksheet('Detailed Analysis');

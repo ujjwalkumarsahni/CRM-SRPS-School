@@ -1,31 +1,86 @@
-const axios = require('axios');
+// const axios = require("axios");
+
+// const getAddressFromCoordinates = async (lat, lng) => {
+//   try {
+
+//     const response = await axios.get(
+//       "https://nominatim.openstreetmap.org/reverse",
+//       {
+//         params: {
+//           lat,
+//           lon: lng,
+//           format: "json"
+//         },
+
+//         headers: {
+//           "User-Agent": "attendance-system"
+//         }
+//       }
+//     );
+
+//     return response.data.display_name;
+
+//   } catch (error) {
+
+//     console.log("Location Error:", error.message);
+
+//     return "Unknown Location";
+//   }
+// };
+
+// module.exports = {
+//   getAddressFromCoordinates
+// };
+
+const axios = require("axios");
 
 const getAddressFromCoordinates = async (lat, lng) => {
   try {
+
     const response = await axios.get(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyC8Pq8uVl8N8Eb6cVXwWQSDVpSYdq7MKMY`
+      "https://nominatim.openstreetmap.org/reverse",
+      {
+        params: {
+          lat,
+          lon: lng,
+          format: "json",
+          addressdetails: 1
+        },
+
+        headers: {
+          "User-Agent": "attendance-system"
+        }
+      }
     );
-    console.log(JSON.stringify(response.data, null, 2));
-    if (response.data.results && response.data.results[0]) {
-      return response.data.results[0].formatted_address;
+
+    const data = response.data;
+
+    if (!data || !data.address) {
+      return "Unknown Location";
     }
-    return `${lat}, ${lng}`;
+
+    const address = data.address;
+
+    const formattedAddress = [
+      address.road,
+      address.suburb,
+      address.city || address.town || address.village,
+      address.state,
+      address.country
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    return formattedAddress;
+
   } catch (error) {
-    console.error('Error getting address:', error);
-    return `${lat}, ${lng}`;
+
+    console.log("Location Error:", error.message);
+
+    return "Unknown Location";
   }
 };
 
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; // Earth's radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
+module.exports = {
+  getAddressFromCoordinates
 };
-
-module.exports = { getAddressFromCoordinates, calculateDistance };

@@ -1,10 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+dotenv.config();
 const connectDB = require('./src/configs/database');
 const initializeCronJobs = require('./src/utils/cronJobs');
 
-dotenv.config();
+
 
 const app = express();
 
